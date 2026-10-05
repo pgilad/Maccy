@@ -9,14 +9,22 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let onToggle: () -> Void
   private let onOpenSettings: () -> Void
+  private let onWillShowMenu: () -> Void
 
   var button: NSStatusBarButton? { statusItem.button }
 
-  init(preferences: Preferences, controller: HistoryController, onToggle: @escaping () -> Void, onOpenSettings: @escaping () -> Void) {
+  init(
+    preferences: Preferences,
+    controller: HistoryController,
+    onToggle: @escaping () -> Void,
+    onOpenSettings: @escaping () -> Void,
+    onWillShowMenu: @escaping () -> Void
+  ) {
     self.preferences = preferences
     self.controller = controller
     self.onToggle = onToggle
     self.onOpenSettings = onOpenSettings
+    self.onWillShowMenu = onWillShowMenu
     super.init()
     statusItem.behavior = .removalAllowed
     if let button = statusItem.button {
@@ -80,6 +88,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   }
 
   private func showMenu() {
+    // The panel floats above menu bar menus (it must cover Chrome autofill pop-ups),
+    // so it would hide this menu. A click in the menu bar dismisses the panel anyway.
+    onWillShowMenu()
     preferences.refreshPauseState()
     let menu = NSMenu()
     let open = menu.addItem(withTitle: "Open Maccy", action: #selector(openPanel), keyEquivalent: "")

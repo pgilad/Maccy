@@ -35,7 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       preferences: preferences,
       controller: controller,
       onToggle: { [weak self] in self?.panel.toggle(from: .statusItem) },
-      onOpenSettings: { [weak self] in self?.openSettings() }
+      onOpenSettings: { [weak self] in self?.openSettings() },
+      onWillShowMenu: { [weak self] in self?.panel.close() }
     )
     panel.statusButton = statusItem.button
     controller.closePanel = { [weak self] in self?.panel.close() }
