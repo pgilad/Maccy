@@ -86,7 +86,8 @@ final class PanelController: NSObject, NSWindowDelegate {
     preferences.refreshPauseState()
     model.prepareForOpen(target: target)
 
-    let position: PanelPosition = source == .statusItem ? .menuBarIcon : preferences.panelPosition
+    // The same place for every way to open the panel (icon, shortcut, Finder).
+    let position = preferences.panelPosition
     let screen = screenForPanel(position: position)
     var size = preferences.windowSize
     if let visible = screen?.visibleFrame {
