@@ -41,9 +41,7 @@ enum SnapshotRenderer {
     ok = save(panel(model), size: preferences.windowSize, to: directory.appending(path: "panel-search.png")) && ok
 
     model.isCommandHeld = true
-    model.isActionPanelPresented = true
-    ok = save(panel(model), size: preferences.windowSize, to: directory.appending(path: "panel-actions.png")) && ok
-    model.isActionPanelPresented = false
+    ok = save(panel(model), size: preferences.windowSize, to: directory.appending(path: "panel-shortcuts.png")) && ok
     model.isCommandHeld = false
 
     model.query = "zzzz nothing matches"

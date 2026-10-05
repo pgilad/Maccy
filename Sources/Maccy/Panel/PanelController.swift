@@ -61,6 +61,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     self.preferences = preferences
     super.init()
     panel.delegate = self
+    model.onShowActions = { [weak self] in self?.showActions() }
     let hostingView = NSHostingView(rootView: ClipboardView(model: model))
     hostingView.sizingOptions = []
     panel.contentView = hostingView
@@ -126,7 +127,6 @@ final class PanelController: NSObject, NSWindowDelegate {
       HotKeyCenter.shared.resume()
       hotKeySuspended = false
     }
-    model.isActionPanelPresented = false
     model.editorText = nil
     statusButton?.highlight(false)
   }
@@ -295,22 +295,6 @@ final class PanelController: NSObject, NSWindowDelegate {
       }
     }
 
-    if model.isActionPanelPresented {
-      switch (keyCode, modifiers) {
-      case (kVK_Escape, []), (kVK_ANSI_K, .command):
-        model.isActionPanelPresented = false
-      case (kVK_DownArrow, []), (kVK_ANSI_N, .control), (kVK_ANSI_J, .control):
-        model.moveActionSelection(by: 1)
-      case (kVK_UpArrow, []), (kVK_ANSI_P, .control), (kVK_ANSI_K, .control):
-        model.moveActionSelection(by: -1)
-      case (kVK_Return, []), (kVK_ANSI_KeypadEnter, []):
-        model.runSelectedAction()
-      default:
-        return event
-      }
-      return nil
-    }
-
     switch (keyCode, modifiers) {
     case (kVK_Escape, []):
       if model.query.isEmpty && model.kindFilter == nil {
@@ -338,7 +322,9 @@ final class PanelController: NSObject, NSWindowDelegate {
     case (kVK_Return, .option), (kVK_Return, [.option, .shift]):
       model.pastePlainText()
     case (kVK_ANSI_K, .command):
-      model.isActionPanelPresented = true
+      showActions()
+    case (kVK_ANSI_Comma, .command):
+      model.onOpenSettings()
     case (kVK_ANSI_P, .command):
       model.cycleKindFilter()
     case (kVK_ANSI_P, [.command, .shift]):
@@ -366,20 +352,28 @@ final class PanelController: NSObject, NSWindowDelegate {
     kVK_ANSI_1, kVK_ANSI_2, kVK_ANSI_3, kVK_ANSI_4, kVK_ANSI_5, kVK_ANSI_6, kVK_ANSI_7, kVK_ANSI_8, kVK_ANSI_9,
   ]
 
-  /// Runs the action panel entry that has this shortcut, if the selected item supports it.
+  /// Runs the action that has this shortcut, if the selected item supports it.
   private func runAction(for keyCode: Int, modifiers: NSEvent.ModifierFlags) -> Bool {
-    let shortcut: String
-    switch (keyCode, modifiers) {
-    case (kVK_ANSI_O, .command): shortcut = "⌘O"
-    case (kVK_ANSI_S, .command): shortcut = "⌘S"
-    case (kVK_ANSI_F, [.command, .shift]): shortcut = "⇧⌘F"
-    case (kVK_ANSI_C, [.command, .shift]): shortcut = "⇧⌘C"
+    let key: String
+    switch keyCode {
+    case kVK_ANSI_O: key = "o"
+    case kVK_ANSI_S: key = "s"
+    case kVK_ANSI_F: key = "f"
+    case kVK_ANSI_C: key = "c"
     default: return false
     }
-    guard let action = model.actions.first(where: { $0.shortcut == shortcut }) else {
+    guard let action = model.actions.first(where: { $0.keyEquivalent == key && $0.modifiers == modifiers }) else {
       return false
     }
     action.perform()
     return true
+  }
+
+  /// Shows the actions as a native menu above the Actions button.
+  func showActions() {
+    guard isOpen, let view = panel.contentView else {
+      return
+    }
+    ActionMenu.popUp(ActionMenu.make(model.actions), in: view, footerHeight: FooterBar.height)
   }
 }

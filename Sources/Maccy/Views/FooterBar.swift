@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct FooterBar: View {
+  static let height: CGFloat = 38
+
   let model: PanelModel
 
   var body: some View {
@@ -14,11 +16,11 @@ struct FooterBar: View {
         Divider().frame(height: 16)
       }
       HintButton(title: "Actions", keys: "⌘K") {
-        model.isActionPanelPresented.toggle()
+        model.onShowActions()
       }
     }
     .padding(.horizontal, 12)
-    .frame(height: 38)
+    .frame(height: Self.height)
   }
 
   @ViewBuilder

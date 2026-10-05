@@ -8,6 +8,9 @@ enum AppMenu {
 
     let appItem = NSMenuItem()
     let appMenu = NSMenu(title: "Maccy")
+    // Sent up the responder chain to the app delegate, so ⌘, works in any Maccy window.
+    appMenu.addItem(withTitle: "Settings…", action: #selector(AppDelegate.showSettings(_:)), keyEquivalent: ",")
+    appMenu.addItem(.separator())
     appMenu.addItem(withTitle: "Quit Maccy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     appItem.submenu = appMenu
     main.addItem(appItem)

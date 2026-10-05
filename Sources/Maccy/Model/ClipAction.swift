@@ -1,131 +1,107 @@
 import AppKit
 import MaccyCore
 
-/// One entry of the action panel (⌘K).
+/// One entry of the actions menu (⌘K). The key equivalent is shown in the
+/// menu; PanelController handles the same keys while the menu is closed.
 struct ClipAction: Identifiable {
-  enum Role {
-    case normal
-    case destructive
+  enum Section: Int {
+    case deliver, open, item, app
   }
 
   let id: String
   let title: String
   let symbol: String
-  let shortcut: String
-  var role: Role = .normal
+  let section: Section
+  var keyEquivalent = ""
+  var modifiers: NSEvent.ModifierFlags = []
   let perform: () -> Void
 }
 
 extension PanelModel {
   var primaryActionTitle: String {
-    switch controller.primaryDelivery {
+    title(for: controller.primaryDelivery)
+  }
+
+  private func title(for delivery: HistoryController.Delivery) -> String {
+    switch delivery {
     case .paste: targetApp?.name.map { "Paste to \($0)" } ?? "Paste"
     case .copy: "Copy to Clipboard"
     }
   }
 
-  private var secondaryActionTitle: String {
-    switch controller.secondaryDelivery {
-    case .paste: targetApp?.name.map { "Paste to \($0)" } ?? "Paste"
-    case .copy: "Copy to Clipboard"
-    }
+  private func symbol(for delivery: HistoryController.Delivery) -> String {
+    delivery == .paste ? "arrow.down.doc" : "doc.on.doc"
   }
 
-  /// The actions for the selected item, filtered by the action search text.
+  /// The actions for the selected item, in menu order.
   var actions: [ClipAction] {
     var list: [ClipAction] = []
     if let row = selectedRow {
       let kind = row.summary.kind
-      let primarySymbol = controller.primaryDelivery == .paste ? "arrow.down.doc" : "doc.on.doc"
-      let secondarySymbol = controller.secondaryDelivery == .paste ? "arrow.down.doc" : "doc.on.doc"
-      list.append(ClipAction(id: "primary", title: primaryActionTitle, symbol: primarySymbol, shortcut: "↩") { [self] in
-        performPrimary()
-      })
-      list.append(ClipAction(id: "secondary", title: secondaryActionTitle, symbol: secondarySymbol, shortcut: "⌘↩") { [self] in
-        performSecondary()
-      })
+      list.append(ClipAction(
+        id: "primary", title: title(for: controller.primaryDelivery), symbol: symbol(for: controller.primaryDelivery),
+        section: .deliver, keyEquivalent: "\r"
+      ) { [self] in performPrimary() })
+      list.append(ClipAction(
+        id: "secondary", title: title(for: controller.secondaryDelivery), symbol: symbol(for: controller.secondaryDelivery),
+        section: .deliver, keyEquivalent: "\r", modifiers: .command
+      ) { [self] in performSecondary() })
       if kind != .image {
-        list.append(ClipAction(id: "plain", title: "Paste as Plain Text", symbol: "textformat", shortcut: "⌥↩") { [self] in
-          pastePlainText()
-        })
-        list.append(ClipAction(id: "edit", title: "Edit and Paste…", symbol: "pencil", shortcut: "⌘E") { [self] in
-          beginEditing()
-        })
+        list.append(ClipAction(
+          id: "plain", title: "Paste as Plain Text", symbol: "textformat", section: .deliver,
+          keyEquivalent: "\r", modifiers: .option
+        ) { [self] in pastePlainText() })
+        list.append(ClipAction(
+          id: "edit", title: "Edit and Paste…", symbol: "pencil", section: .deliver, keyEquivalent: "e", modifiers: .command
+        ) { [self] in beginEditing() })
       }
       if kind == .link, let url = detail.flatMap({ TextUtilities.link(in: $0.text) }) {
-        list.append(ClipAction(id: "open", title: "Open Link", symbol: "safari", shortcut: "⌘O") { [self] in
-          controller.open(url)
-        })
+        list.append(ClipAction(
+          id: "open", title: "Open Link", symbol: "safari", section: .open, keyEquivalent: "o", modifiers: .command
+        ) { [self] in controller.open(url) })
       }
       if kind == .file, let urls = detail?.fileURLs, !urls.isEmpty {
-        list.append(ClipAction(id: "open", title: urls.count == 1 ? "Open File" : "Open Files", symbol: "arrow.up.forward.app", shortcut: "⌘O") { [self] in
-          urls.forEach(controller.open)
-        })
-        list.append(ClipAction(id: "reveal", title: "Show in Finder", symbol: "folder", shortcut: "⇧⌘F") { [self] in
-          controller.revealInFinder(urls)
-        })
+        list.append(ClipAction(
+          id: "open", title: urls.count == 1 ? "Open File" : "Open Files", symbol: "arrow.up.forward.app",
+          section: .open, keyEquivalent: "o", modifiers: .command
+        ) { [self] in urls.forEach(controller.open) })
+        list.append(ClipAction(
+          id: "reveal", title: "Show in Finder", symbol: "folder", section: .open,
+          keyEquivalent: "f", modifiers: [.command, .shift]
+        ) { [self] in controller.revealInFinder(urls) })
       }
       if kind == .image {
-        list.append(ClipAction(id: "save", title: "Save Image…", symbol: "square.and.arrow.down", shortcut: "⌘S") { [self] in
-          Task { await controller.saveImage(row.id) }
-        })
+        list.append(ClipAction(
+          id: "save", title: "Save Image…", symbol: "square.and.arrow.down", section: .open,
+          keyEquivalent: "s", modifiers: .command
+        ) { [self] in Task { await controller.saveImage(row.id) } })
         if let text = detail?.ocrText, !text.isEmpty {
-          list.append(ClipAction(id: "ocr", title: "Copy Text in Image", symbol: "text.viewfinder", shortcut: "⇧⌘C") { [self] in
-            controller.copyText(text)
-          })
+          list.append(ClipAction(
+            id: "ocr", title: "Copy Text in Image", symbol: "text.viewfinder", section: .open,
+            keyEquivalent: "c", modifiers: [.command, .shift]
+          ) { [self] in controller.copyText(text) })
         }
       }
       list.append(ClipAction(
-        id: "pin",
-        title: row.summary.isPinned ? "Unpin" : "Pin",
-        symbol: row.summary.isPinned ? "pin.slash" : "pin",
-        shortcut: "⇧⌘P"
-      ) { [self] in
-        togglePin()
-      })
-      list.append(ClipAction(id: "delete", title: "Delete", symbol: "trash", shortcut: "⌘⌫", role: .destructive) { [self] in
-        deleteSelected()
-      })
+        id: "pin", title: row.summary.isPinned ? "Unpin" : "Pin", symbol: row.summary.isPinned ? "pin.slash" : "pin",
+        section: .item, keyEquivalent: "p", modifiers: [.command, .shift]
+      ) { [self] in togglePin() })
+      list.append(ClipAction(
+        id: "delete", title: "Delete", symbol: "trash", section: .item, keyEquivalent: "\u{8}", modifiers: .command
+      ) { [self] in deleteSelected() })
     }
-    list.append(ClipAction(id: "deleteAll", title: "Delete All Unpinned…", symbol: "trash.slash", shortcut: "⇧⌘⌫", role: .destructive) { [self] in
-      onRequestClearHistory()
-    })
     list.append(ClipAction(
-      id: "pause",
-      title: preferences.isPaused ? "Resume Capture" : "Pause Capture",
-      symbol: preferences.isPaused ? "play.circle" : "pause.circle",
-      shortcut: ""
-    ) { [self] in
-      togglePause()
-    })
-    list.append(ClipAction(id: "settings", title: "Settings…", symbol: "gearshape", shortcut: "⌘,") { [self] in
-      onOpenSettings()
-    })
-
-    let filter = actionQuery.trimmingCharacters(in: .whitespaces)
-    guard !filter.isEmpty else {
-      return list
-    }
-    return list.filter { $0.title.localizedStandardContains(filter) }
-  }
-
-  func runSelectedAction() {
-    let list = actions
-    guard list.indices.contains(actionSelection) else {
-      return
-    }
-    // Take the action first: closing the panel resets `actionSelection` to 0.
-    let action = list[actionSelection]
-    isActionPanelPresented = false
-    action.perform()
-  }
-
-  func moveActionSelection(by offset: Int) {
-    let count = actions.count
-    guard count > 0 else {
-      return
-    }
-    actionSelection = (actionSelection + offset + count) % count
+      id: "deleteAll", title: "Delete All Unpinned…", symbol: "trash.slash", section: .item,
+      keyEquivalent: "\u{8}", modifiers: [.command, .shift]
+    ) { [self] in onRequestClearHistory() })
+    list.append(ClipAction(
+      id: "pause", title: preferences.isPaused ? "Resume Capture" : "Pause Capture",
+      symbol: preferences.isPaused ? "play.circle" : "pause.circle", section: .app
+    ) { [self] in togglePause() })
+    list.append(ClipAction(
+      id: "settings", title: "Settings…", symbol: "gearshape", section: .app, keyEquivalent: ",", modifiers: .command
+    ) { [self] in onOpenSettings() })
+    return list
   }
 
   func togglePause() {

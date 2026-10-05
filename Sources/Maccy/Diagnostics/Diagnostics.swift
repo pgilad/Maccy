@@ -181,17 +181,19 @@ final class SelfTest {
     let regex = (try? await store.search(SearchQuery.parse("/hel+o/"), limit: 10).hits) ?? []
     check(regex.first?.id == textID, "regex search")
 
-    // 12. Action panel: the chosen action runs, not the first one in the list.
+    // 12. Actions menu: the chosen item runs its own action, not the first one.
     let model = PanelModel(controller: controller)
     var openedSettings = false
     var requestedClear = false
     model.onOpenSettings = { openedSettings = true }
     model.onRequestClearHistory = { requestedClear = true }
-    model.isActionPanelPresented = true
-    model.actionSelection = model.actions.firstIndex { $0.id == "settings" } ?? 0
-    model.runSelectedAction()
-    check(openedSettings && !requestedClear, "action panel runs the selected action")
-    check(!model.isActionPanelPresented, "action panel closes after an action")
+    let menu = ActionMenu.make(model.actions)
+    let settingsIndex = menu.items.firstIndex { $0.identifier?.rawValue == "settings" }
+    if let settingsIndex {
+      menu.performActionForItem(at: settingsIndex)
+    }
+    check(openedSettings && !requestedClear, "actions menu runs the chosen action")
+    check(menu.items.first(where: { $0.identifier?.rawValue == "settings" })?.keyEquivalent == ",", "actions menu shows key equivalents")
 
     // 13. Settings: a tab switch resizes the window with no animation. Sample the
     // height: an animation shows heights between the old and the new value.

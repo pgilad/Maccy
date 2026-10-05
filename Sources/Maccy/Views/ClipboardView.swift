@@ -21,20 +21,11 @@ struct ClipboardView: View {
       Divider()
       FooterBar(model: model)
     }
-    .overlay(alignment: .bottomTrailing) {
-      if model.isActionPanelPresented {
-        ActionPanel(model: model)
-          .padding(.trailing, 10)
-          .padding(.bottom, 44)
-          .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .bottomTrailing)))
-      }
-    }
     .overlay {
       if model.editorText != nil {
         EditorOverlay(model: model)
       }
     }
-    .animation(.easeOut(duration: 0.12), value: model.isActionPanelPresented)
     .background {
       RoundedRectangle(cornerRadius: 16, style: .continuous)
         .fill(.clear)
@@ -43,11 +34,6 @@ struct ClipboardView: View {
     .clipShape(.rect(cornerRadius: 16, style: .continuous))
     .onChange(of: model.openCount, initial: true) {
       searchFocused = true
-    }
-    .onChange(of: model.isActionPanelPresented) { _, presented in
-      if !presented {
-        searchFocused = true
-      }
     }
     .onChange(of: model.editorText == nil) { _, closed in
       if closed {
@@ -81,7 +67,7 @@ struct SearchBar: View {
           .textFieldStyle(.plain)
           .font(.system(size: 18))
           .focused(focused)
-          .disabled(model.isActionPanelPresented || model.editorText != nil)
+          .disabled(model.editorText != nil)
           .accessibilityIdentifier("search")
       }
       if let error = model.searchError {

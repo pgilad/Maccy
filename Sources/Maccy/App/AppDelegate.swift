@@ -81,6 +81,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     settings.show()
   }
 
+  @objc func showSettings(_ sender: Any?) {
+    openSettings()
+  }
+
   private func confirmClearHistory() {
     panel.close()
     NSApp.activate()

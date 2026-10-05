@@ -46,23 +46,12 @@ final class PanelModel {
   private(set) var openCount = 0
   var isCommandHeld = false
 
-  // Action panel and editor.
-  var isActionPanelPresented = false {
-    didSet {
-      actionQuery = ""
-      actionSelection = 0
-    }
-  }
-  var actionQuery = "" {
-    didSet {
-      actionSelection = 0
-    }
-  }
-  var actionSelection = 0
+  /// The text in the "Edit and Paste" editor, or `nil` when the editor is closed.
   var editorText: String?
 
   /// Set by the panel controller.
   @ObservationIgnored var onOpenSettings: () -> Void = {}
+  @ObservationIgnored var onShowActions: () -> Void = {}
   @ObservationIgnored var onRequestClearHistory: () -> Void = {}
 
   @ObservationIgnored private var searchTask: Task<Void, Never>?
@@ -87,7 +76,6 @@ final class PanelModel {
 
   func prepareForOpen(target: SourceApp?) {
     targetApp = target
-    isActionPanelPresented = false
     editorText = nil
     isCommandHeld = false
     controller.toast = nil

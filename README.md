@@ -15,7 +15,7 @@ A fast, private clipboard manager for macOS 26 and later, built from source. It 
 - Search everywhere in the item, not only in the first line. Case- and diacritic-insensitive, ranked by match position, recency and frequency, with a fuzzy fallback.
 - Text in images is searchable (on-device OCR with Vision).
 - Type filter (⌘P) and search syntax: `type:image`, `app:slack`, `is:pinned`, `"exact phrase"`, `/regex/`.
-- Action panel (⌘K): paste, copy, paste as plain text, edit and paste, open link, show in Finder, save image, copy text in image, pin, delete.
+- Actions menu (⌘K, a native macOS menu): paste, copy, paste as plain text, edit and paste, open link, show in Finder, save image, copy text in image, pin, delete.
 - Pins stay at the top and are never deleted by retention.
 - Retention by age (1 day to forever), item count, and total size.
 - Pause capture from the menu bar (⌥-click, or right-click for timed pauses), or from a script: `defaults write com.pgilad.Maccy ignoreEvents true`.
@@ -63,7 +63,8 @@ make install
 | ⌘↩ | Copy (or paste) |
 | ⌥↩ | Paste as plain text |
 | ⌘1 – ⌘9 | Paste one of the first nine items |
-| ⌘K | Actions |
+| ⌘K | Actions menu |
+| ⌘, | Settings |
 | ⌘P | Next type filter |
 | ⇧⌘P | Pin or unpin |
 | ⌘E | Edit, then paste |
