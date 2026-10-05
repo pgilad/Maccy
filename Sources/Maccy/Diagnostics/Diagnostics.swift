@@ -193,6 +193,25 @@ final class SelfTest {
     check(openedSettings && !requestedClear, "action panel runs the selected action")
     check(!model.isActionPanelPresented, "action panel closes after an action")
 
+    // 13. Settings: a tab switch resizes the window with no animation. Sample the
+    // height: an animation shows heights between the old and the new value.
+    let settings = SettingsWindowController.makeWindow(preferences: preferences, controller: controller)
+    settings.setFrameOrigin(NSPoint(x: -20_000, y: -20_000))
+    settings.orderFrontRegardless()
+    try? await Task.sleep(for: .milliseconds(200))
+    let generalHeight = settings.frame.height
+    (settings.contentViewController as? NSTabViewController)?.selectedTabViewItemIndex = 3
+    var heights: [CGFloat] = []
+    for _ in 0..<40 {
+      heights.append(settings.frame.height)
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    settings.orderOut(nil)
+    let finalHeight = heights.last ?? generalHeight
+    let intermediate = heights.filter { $0 != generalHeight && $0 != finalHeight }
+    print("  settings heights: \(Array(NSOrderedSet(array: heights)))")
+    check(finalHeight < generalHeight && intermediate.isEmpty, "settings tab switch has no animation")
+
     print("\nSelf-test: \(passes) passed, \(failures) failed")
     return failures == 0
   }

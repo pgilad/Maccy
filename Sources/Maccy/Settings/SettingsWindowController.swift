@@ -43,7 +43,8 @@ final class SettingsWindowController {
 
     let tabs = NSTabViewController()
     tabs.tabStyle = .toolbar
-    tabs.transitionOptions = [.crossfade, .allowUserInteraction]
+    // Switch tabs at once: no crossfade, and the window resizes without animation.
+    tabs.transitionOptions = []
     for pane in panes {
       let hosting = NSHostingController(rootView: pane.view.frame(width: width, height: pane.height))
       hosting.sizingOptions = [.preferredContentSize]
