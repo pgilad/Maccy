@@ -1,0 +1,405 @@
+import Combine
+import MaccyCore
+import SwiftUI
+import UniformTypeIdentifiers
+
+struct SettingsView: View {
+  let preferences: Preferences
+  let controller: HistoryController
+
+  var body: some View {
+    TabView {
+      Tab("General", systemImage: "gearshape") {
+        GeneralSettings(preferences: preferences)
+      }
+      Tab("History", systemImage: "clock.arrow.circlepath") {
+        HistorySettings(preferences: preferences, controller: controller)
+      }
+      Tab("Privacy", systemImage: "hand.raised") {
+        PrivacySettings(preferences: preferences)
+      }
+      Tab("Advanced", systemImage: "slider.horizontal.3") {
+        AdvancedSettings(preferences: preferences)
+      }
+    }
+    .frame(width: 560)
+    .frame(minHeight: 460)
+  }
+}
+
+// MARK: - General
+
+struct GeneralSettings: View {
+  @Bindable var preferences: Preferences
+  @ViewState private var launchAtLogin = LaunchAtLogin.isEnabled
+  @ViewState private var accessibility = Permissions.accessibilityGranted
+  @ViewState private var pasteboardAccess = Permissions.pasteboardAccessDescription
+  private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+
+  var body: some View {
+    Form {
+      Section("Permissions") {
+        PermissionRow(
+          title: "Accessibility",
+          detail: "Needed to paste into other apps. Without it, Maccy copies, and you press ⌘V.",
+          isGranted: accessibility,
+          status: accessibility ? "Allowed" : "Not allowed",
+          action: {
+            Paster.requestAccess()
+            Permissions.openAccessibilitySettings()
+          }
+        )
+        PermissionRow(
+          title: "Pasteboard access",
+          detail: "Set Maccy to always allow pasteboard access in Privacy & Security, if macOS asks.",
+          isGranted: !Permissions.pasteboardAccessNeedsAttention,
+          status: pasteboardAccess,
+          action: Permissions.openPrivacySettings
+        )
+      }
+
+      Section("Startup") {
+        Toggle("Open at login", isOn: $launchAtLogin)
+          .onChange(of: launchAtLogin) { _, enabled in
+            LaunchAtLogin.set(enabled)
+            launchAtLogin = LaunchAtLogin.isEnabled
+          }
+        if LaunchAtLogin.needsApproval {
+          Text("Approve Maccy in System Settings › General › Login Items.")
+            .font(.caption)
+            .foregroundStyle(.orange)
+        }
+      }
+
+      Section("Panel") {
+        LabeledContent("Open shortcut") {
+          ShortcutRecorder(combo: $preferences.hotKey)
+        }
+        Picker("Position", selection: $preferences.panelPosition) {
+          ForEach(PanelPosition.allCases) { Text($0.title).tag($0) }
+        }
+        Toggle("Show app icons", isOn: $preferences.showAppIcons)
+      }
+
+      Section {
+        Toggle("Paste automatically", isOn: $preferences.pasteAutomatically)
+        Toggle("Paste as plain text by default", isOn: $preferences.pastePlainTextByDefault)
+      } header: {
+        Text("Return key")
+      } footer: {
+        Text(returnKeyDescription)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
+      Section("Menu bar") {
+        Toggle("Show icon in menu bar", isOn: $preferences.showInMenuBar)
+        Picker("Icon", selection: $preferences.menuIcon) {
+          ForEach(MenuIcon.allCases) { icon in
+            Image(nsImage: icon.image).tag(icon)
+          }
+        }
+        .pickerStyle(.segmented)
+        Toggle("Show the latest copy next to the icon", isOn: $preferences.showRecentCopyInMenuBar)
+      }
+    }
+    .formStyle(.grouped)
+    .onReceive(timer) { _ in
+      accessibility = Permissions.accessibilityGranted
+      pasteboardAccess = Permissions.pasteboardAccessDescription
+    }
+  }
+
+  private var returnKeyDescription: String {
+    let primary = preferences.pasteAutomatically ? "pastes into the active app" : "copies to the clipboard"
+    let secondary = preferences.pasteAutomatically ? "copies" : "pastes"
+    return "↩ \(primary). ⌘↩ \(secondary). ⌥↩ pastes as plain text. ⌘1–⌘9 paste the first nine items."
+  }
+}
+
+struct PermissionRow: View {
+  let title: String
+  let detail: String
+  let isGranted: Bool
+  let status: String
+  let action: () -> Void
+
+  var body: some View {
+    HStack(alignment: .top) {
+      Image(systemName: isGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+        .foregroundStyle(isGranted ? .green : .orange)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(title)
+        Text(detail)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+      Spacer()
+      VStack(alignment: .trailing, spacing: 4) {
+        Text(status)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+        if !isGranted {
+          Button("Open Settings", action: action)
+            .controlSize(.small)
+        }
+      }
+    }
+  }
+}
+
+// MARK: - History
+
+struct HistorySettings: View {
+  @Bindable var preferences: Preferences
+  let controller: HistoryController
+  @ViewState private var stats: HistoryStats?
+  @ViewState private var confirmClear = false
+  @ViewState private var confirmClearAll = false
+
+  var body: some View {
+    Form {
+      Section("Keep") {
+        Picker("Keep history for", selection: $preferences.retention) {
+          ForEach(RetentionOption.allCases) { Text($0.title).tag($0) }
+        }
+        LabeledContent("Maximum items") {
+          TextField("Unlimited", value: $preferences.maxItems, format: .number)
+            .multilineTextAlignment(.trailing)
+            .frame(width: 100)
+        }
+        LabeledContent("Maximum storage (MB)") {
+          TextField("Unlimited", value: $preferences.maxStorageMB, format: .number)
+            .multilineTextAlignment(.trailing)
+            .frame(width: 100)
+        }
+        Text("Pinned items are never deleted. Use 0 for no limit.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+      .onChange(of: preferences.retentionPolicy) {
+        Task {
+          await controller.prune()
+          await refreshStats()
+        }
+      }
+
+      Section("Save") {
+        Toggle("Text, rich text and links", isOn: $preferences.saveText)
+        Toggle("Images", isOn: $preferences.saveImages)
+        Toggle("Files", isOn: $preferences.saveFiles)
+        LabeledContent("Largest image (MB)") {
+          TextField("", value: $preferences.maxImageMB, format: .number)
+            .multilineTextAlignment(.trailing)
+            .frame(width: 100)
+        }
+        Toggle("Find text in images (on-device OCR)", isOn: $preferences.ocrEnabled)
+      }
+
+      Section("Storage") {
+        if let stats {
+          LabeledContent("Items", value: "\(stats.itemCount.formatted()) (\(stats.pinnedCount) pinned)")
+          LabeledContent("Disk use", value: ByteCountFormatter.string(fromByteCount: Int64(stats.diskBytes), countStyle: .file))
+        }
+        Toggle("Clear history on quit", isOn: $preferences.clearOnQuit)
+        Toggle("Also clear the system clipboard", isOn: $preferences.clearSystemClipboard)
+        HStack {
+          Button("Clear Unpinned…") { confirmClear = true }
+          Button("Clear All…", role: .destructive) { confirmClearAll = true }
+          Spacer()
+          Button("Show in Finder") {
+            NSWorkspace.shared.activateFileViewerSelecting([controller.store.directory])
+          }
+        }
+      }
+    }
+    .formStyle(.grouped)
+    .task { await refreshStats() }
+    .onChange(of: controller.revision) {
+      Task { await refreshStats() }
+    }
+    .confirmationDialog("Delete all unpinned items?", isPresented: $confirmClear) {
+      Button("Delete", role: .destructive) {
+        Task {
+          await controller.clearHistory(keepPinned: true)
+          await refreshStats()
+        }
+      }
+    }
+    .confirmationDialog("Delete all items, pinned items too?", isPresented: $confirmClearAll) {
+      Button("Delete All", role: .destructive) {
+        Task {
+          await controller.clearHistory(keepPinned: false)
+          await refreshStats()
+        }
+      }
+    }
+  }
+
+  private func refreshStats() async {
+    stats = try? await controller.store.stats()
+  }
+}
+
+// MARK: - Privacy
+
+struct PrivacySettings: View {
+  @Bindable var preferences: Preferences
+  @ViewState private var newType = ""
+  @ViewState private var newPattern = ""
+
+  var body: some View {
+    Form {
+      Section {
+        Picker("Copies that look like secrets", selection: $preferences.secretPolicy) {
+          ForEach(SecretPolicy.allCases) { Text($0.title).tag($0) }
+        }
+      } footer: {
+        Text("Detects API keys and tokens (AWS, GitHub, GitLab, Slack, Stripe, Google, OpenAI, Anthropic, npm), JSON Web Tokens and private keys. Copies that password managers mark as concealed are never saved.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
+      Section {
+        Toggle("Save copies only from the apps in the list", isOn: $preferences.onlyListedApps)
+        ForEach(preferences.ignoredApps, id: \.self) { bundleID in
+          HStack {
+            if let icon = AppIcons.icon(for: bundleID) {
+              Image(nsImage: icon).resizable().frame(width: 16, height: 16)
+            }
+            Text(AppIcons.name(for: bundleID) ?? bundleID)
+            Text(bundleID)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+            Spacer()
+            RemoveButton { preferences.ignoredApps.removeAll { $0 == bundleID } }
+          }
+        }
+        Button("Add App…", action: addApp)
+      } header: {
+        Text(preferences.onlyListedApps ? "Allowed apps" : "Ignored apps")
+      }
+
+      Section {
+        ForEach(preferences.ignoredTypes, id: \.self) { type in
+          HStack {
+            Text(type).font(.callout.monospaced())
+            Spacer()
+            RemoveButton { preferences.ignoredTypes.removeAll { $0 == type } }
+          }
+        }
+        HStack {
+          TextField("Pasteboard type, for example com.example.secret", text: $newType)
+          Button("Add") {
+            let value = newType.trimmingCharacters(in: .whitespaces)
+            if !value.isEmpty && !preferences.ignoredTypes.contains(value) {
+              preferences.ignoredTypes.append(value)
+            }
+            newType = ""
+          }
+        }
+      } header: {
+        Text("Ignored pasteboard types")
+      }
+
+      Section {
+        let invalid = Set(IgnorePatterns(preferences.ignorePatterns).invalidPatterns)
+        ForEach(preferences.ignorePatterns, id: \.self) { pattern in
+          HStack {
+            Text(pattern).font(.callout.monospaced())
+            if invalid.contains(pattern) {
+              Text("Invalid").font(.caption).foregroundStyle(.red)
+            }
+            Spacer()
+            RemoveButton { preferences.ignorePatterns.removeAll { $0 == pattern } }
+          }
+        }
+        HStack {
+          TextField("Regular expression", text: $newPattern)
+          Button("Add") {
+            let value = newPattern.trimmingCharacters(in: .whitespaces)
+            if !value.isEmpty && !preferences.ignorePatterns.contains(value) {
+              preferences.ignorePatterns.append(value)
+            }
+            newPattern = ""
+          }
+        }
+      } header: {
+        Text("Ignore copies that match")
+      }
+    }
+    .formStyle(.grouped)
+  }
+
+  private func addApp() {
+    let panel = NSOpenPanel()
+    panel.allowedContentTypes = [.application]
+    panel.directoryURL = URL(filePath: "/Applications")
+    panel.allowsMultipleSelection = true
+    guard panel.runModal() == .OK else {
+      return
+    }
+    for url in panel.urls {
+      if let bundleID = Bundle(url: url)?.bundleIdentifier, !preferences.ignoredApps.contains(bundleID) {
+        preferences.ignoredApps.append(bundleID)
+      }
+    }
+  }
+}
+
+struct RemoveButton: View {
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: "minus.circle.fill")
+        .foregroundStyle(.secondary)
+    }
+    .buttonStyle(.borderless)
+    .help("Remove")
+  }
+}
+
+// MARK: - Advanced
+
+struct AdvancedSettings: View {
+  @Bindable var preferences: Preferences
+
+  var body: some View {
+    Form {
+      Section {
+        Toggle("Pause capture", isOn: $preferences.ignoreEvents)
+      } footer: {
+        VStack(alignment: .leading, spacing: 6) {
+          Text("⌥-click the menu bar icon to pause or resume. ⇧⌥-click skips only the next copy. A script can do the same:")
+          Text("defaults write \(Bundle.main.bundleIdentifier ?? "com.pgilad.Maccy") ignoreEvents true")
+            .font(.caption.monospaced())
+            .textSelection(.enabled)
+          Text("defaults write \(Bundle.main.bundleIdentifier ?? "com.pgilad.Maccy") ignoreOnlyNextEvent true")
+            .font(.caption.monospaced())
+            .textSelection(.enabled)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      }
+
+      Section {
+        LabeledContent("Check the clipboard every") {
+          Picker("", selection: $preferences.pollInterval) {
+            Text("0.1 s").tag(0.1)
+            Text("0.25 s").tag(0.25)
+            Text("0.5 s").tag(0.5)
+            Text("1 s").tag(1.0)
+          }
+          .labelsHidden()
+          .frame(width: 120)
+        }
+      } footer: {
+        Text("macOS has no clipboard change event. Maccy compares a change counter, which reads no content.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .formStyle(.grouped)
+  }
+}

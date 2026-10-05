@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The history holds secrets. The sandbox limits what a bug in Maccy can reach,
+	     and macOS asks for consent before another app reads the container. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- "Save Image…" and "Add App…" use the system open and save panels. -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+</dict>
+</plist>
