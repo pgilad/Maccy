@@ -163,17 +163,19 @@ struct HistorySettings: View {
         Picker("Keep history for", selection: $preferences.retention) {
           ForEach(RetentionOption.allCases) { Text($0.title).tag($0) }
         }
-        LabeledContent("Maximum items") {
-          TextField("Unlimited", value: $preferences.maxItems, format: .number)
-            .multilineTextAlignment(.trailing)
-            .frame(width: 100)
-        }
-        LabeledContent("Maximum storage (MB)") {
-          TextField("Unlimited", value: $preferences.maxStorageMB, format: .number)
-            .multilineTextAlignment(.trailing)
-            .frame(width: 100)
-        }
-        Text("Pinned items are never deleted. Use 0 for no limit.")
+        LimitPicker(
+          title: "Maximum items",
+          selection: $preferences.maxItems,
+          presets: [1_000, 5_000, 10_000, 50_000, 100_000],
+          label: { "\($0.formatted()) items" }
+        )
+        LimitPicker(
+          title: "Maximum storage",
+          selection: $preferences.maxStorageMB,
+          presets: [256, 512, 1_024, 2_048, 5_120, 10_240],
+          label: Self.megabytes
+        )
+        Text("When a limit is reached, the oldest items are deleted first. Pinned items are never deleted.")
           .font(.caption)
           .foregroundStyle(.secondary)
       }
@@ -188,10 +190,10 @@ struct HistorySettings: View {
         Toggle("Text, rich text and links", isOn: $preferences.saveText)
         Toggle("Images", isOn: $preferences.saveImages)
         Toggle("Files", isOn: $preferences.saveFiles)
-        LabeledContent("Largest image (MB)") {
-          TextField("", value: $preferences.maxImageMB, format: .number)
-            .multilineTextAlignment(.trailing)
-            .frame(width: 100)
+        Picker("Largest image", selection: $preferences.maxImageMB) {
+          ForEach(Self.imageSizes(including: preferences.maxImageMB), id: \.self) { size in
+            Text(Self.megabytes(size)).tag(size)
+          }
         }
         Toggle("Find text in images (on-device OCR)", isOn: $preferences.ocrEnabled)
       }
@@ -239,6 +241,37 @@ struct HistorySettings: View {
   private func refreshStats() async {
     stats = try? await controller.store.stats()
   }
+
+  static func megabytes(_ value: Int) -> String {
+    ByteCountFormatter.string(fromByteCount: Int64(value) * 1_048_576, countStyle: .memory)
+  }
+
+  static func imageSizes(including current: Int) -> [Int] {
+    Array(Set([10, 25, 50, 100, 200, current].filter { $0 > 0 })).sorted()
+  }
+}
+
+/// A menu of preset limits plus "Unlimited" (stored as 0). A value set outside
+/// the presets (for example with `defaults write`) is kept and shown.
+struct LimitPicker: View {
+  let title: String
+  @Binding var selection: Int
+  let presets: [Int]
+  let label: (Int) -> String
+
+  var body: some View {
+    Picker(title, selection: $selection) {
+      Text("Unlimited").tag(0)
+      Divider()
+      ForEach(values, id: \.self) { value in
+        Text(label(value)).tag(value)
+      }
+    }
+  }
+
+  private var values: [Int] {
+    Array(Set(presets + (selection > 0 ? [selection] : []))).sorted()
+  }
 }
 
 // MARK: - Privacy
@@ -267,10 +300,14 @@ struct PrivacySettings: View {
             if let icon = AppIcons.icon(for: bundleID) {
               Image(nsImage: icon).resizable().frame(width: 16, height: 16)
             }
-            Text(AppIcons.name(for: bundleID) ?? bundleID)
-            Text(bundleID)
-              .font(.caption)
-              .foregroundStyle(.secondary)
+            if let name = AppIcons.name(for: bundleID) ?? Self.knownAppNames[bundleID] {
+              Text(name)
+              Text(bundleID)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            } else {
+              Text(bundleID)
+            }
             Spacer()
             RemoveButton { preferences.ignoredApps.removeAll { $0 == bundleID } }
           }
@@ -289,7 +326,8 @@ struct PrivacySettings: View {
           }
         }
         HStack {
-          TextField("Pasteboard type, for example com.example.secret", text: $newType)
+          TextField("Pasteboard type", text: $newType, prompt: Text("com.example.secret-type"))
+            .labelsHidden()
           Button("Add") {
             let value = newType.trimmingCharacters(in: .whitespaces)
             if !value.isEmpty && !preferences.ignoredTypes.contains(value) {
@@ -315,7 +353,8 @@ struct PrivacySettings: View {
           }
         }
         HStack {
-          TextField("Regular expression", text: $newPattern)
+          TextField("Regular expression", text: $newPattern, prompt: Text("Regular expression, for example ^\\d{6}$"))
+            .labelsHidden()
           Button("Add") {
             let value = newPattern.trimmingCharacters(in: .whitespaces)
             if !value.isEmpty && !preferences.ignorePatterns.contains(value) {
@@ -330,6 +369,17 @@ struct PrivacySettings: View {
     }
     .formStyle(.grouped)
   }
+
+  /// Names for the default ignored apps, for Macs where they are not installed.
+  static let knownAppNames: [String: String] = [
+    "com.1password.1password": "1Password",
+    "com.agilebits.onepassword7": "1Password 7",
+    "com.apple.Passwords": "Passwords",
+    "com.apple.keychainaccess": "Keychain Access",
+    "com.bitwarden.desktop": "Bitwarden",
+    "org.keepassxc.keepassxc": "KeePassXC",
+    "com.dashlane.dashlanephonefinal": "Dashlane",
+  ]
 
   private func addApp() {
     let panel = NSOpenPanel()
