@@ -181,6 +181,18 @@ final class SelfTest {
     let regex = (try? await store.search(SearchQuery.parse("/hel+o/"), limit: 10).hits) ?? []
     check(regex.first?.id == textID, "regex search")
 
+    // 12. Action panel: the chosen action runs, not the first one in the list.
+    let model = PanelModel(controller: controller)
+    var openedSettings = false
+    var requestedClear = false
+    model.onOpenSettings = { openedSettings = true }
+    model.onRequestClearHistory = { requestedClear = true }
+    model.isActionPanelPresented = true
+    model.actionSelection = model.actions.firstIndex { $0.id == "settings" } ?? 0
+    model.runSelectedAction()
+    check(openedSettings && !requestedClear, "action panel runs the selected action")
+    check(!model.isActionPanelPresented, "action panel closes after an action")
+
     print("\nSelf-test: \(passes) passed, \(failures) failed")
     return failures == 0
   }

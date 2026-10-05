@@ -114,8 +114,10 @@ extension PanelModel {
     guard list.indices.contains(actionSelection) else {
       return
     }
+    // Take the action first: closing the panel resets `actionSelection` to 0.
+    let action = list[actionSelection]
     isActionPanelPresented = false
-    list[actionSelection].perform()
+    action.perform()
   }
 
   func moveActionSelection(by offset: Int) {
