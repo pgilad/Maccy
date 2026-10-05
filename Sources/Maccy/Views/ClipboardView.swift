@@ -3,6 +3,9 @@ import SwiftUI
 
 /// The panel: search on top, the list on the left, the preview on the right.
 struct ClipboardView: View {
+  /// The panel's coordinate space. Row frames use it for right-click hit testing.
+  nonisolated static let coordinateSpace = "panel"
+
   @Bindable var model: PanelModel
   @FocusState private var searchFocused: Bool
 
@@ -32,6 +35,7 @@ struct ClipboardView: View {
         .glassEffect(.regular, in: .rect(cornerRadius: 16))
     }
     .clipShape(.rect(cornerRadius: 16, style: .continuous))
+    .coordinateSpace(.named(Self.coordinateSpace))
     .onChange(of: model.openCount, initial: true) {
       searchFocused = true
     }

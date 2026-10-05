@@ -9,7 +9,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let onToggle: () -> Void
   private let onOpenSettings: () -> Void
+  private let onOpenAbout: () -> Void
   private let onWillShowMenu: () -> Void
+  private var visibilityObservation: NSKeyValueObservation?
 
   var button: NSStatusBarButton? { statusItem.button }
 
@@ -18,12 +20,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     controller: HistoryController,
     onToggle: @escaping () -> Void,
     onOpenSettings: @escaping () -> Void,
+    onOpenAbout: @escaping () -> Void,
     onWillShowMenu: @escaping () -> Void
   ) {
     self.preferences = preferences
     self.controller = controller
     self.onToggle = onToggle
     self.onOpenSettings = onOpenSettings
+    self.onOpenAbout = onOpenAbout
     self.onWillShowMenu = onWillShowMenu
     super.init()
     statusItem.behavior = .removalAllowed
@@ -35,6 +39,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
     update()
     observe()
+    // ⌘-dragging the icon out of the menu bar hides it. Keep the setting in step.
+    visibilityObservation = statusItem.observe(\.isVisible, options: [.new]) { [weak self] _, change in
+      guard let visible = change.newValue else {
+        return
+      }
+      MainActor.assumeIsolated {
+        if let preferences = self?.preferences, preferences.showInMenuBar != visible {
+          preferences.showInMenuBar = visible
+        }
+      }
+    }
   }
 
   private func observe() {
@@ -95,8 +110,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     let menu = NSMenu()
     let open = menu.addItem(withTitle: "Open Maccy", action: #selector(openPanel), keyEquivalent: "")
     open.target = self
+    // Show the global shortcut where menus show shortcuts: at the trailing edge.
     if let hotKey = preferences.hotKey {
-      open.title = "Open Maccy  (\(hotKey.displayString))"
+      if let key = hotKey.menuKeyEquivalent {
+        open.keyEquivalent = key
+        open.keyEquivalentModifierMask = hotKey.modifiers
+      } else {
+        open.title = "Open Maccy (\(hotKey.displayString))"
+      }
     }
     menu.addItem(.separator())
     if preferences.isPaused {
@@ -113,7 +134,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       menu.addItem(withTitle: "Skip Next Copy", action: #selector(skipNext), keyEquivalent: "").target = self
     }
     menu.addItem(.separator())
+    menu.addItem(withTitle: "About Maccy", action: #selector(openAbout), keyEquivalent: "").target = self
     menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
+    menu.addItem(.separator())
     menu.addItem(withTitle: "Quit Maccy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     statusItem.menu = menu
     statusItem.button?.performClick(nil)
@@ -123,6 +146,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
   @objc private func openPanel() { onToggle() }
   @objc private func openSettings() { onOpenSettings() }
+  @objc private func openAbout() { onOpenAbout() }
 
   @objc private func resume() {
     preferences.ignoreEvents = false

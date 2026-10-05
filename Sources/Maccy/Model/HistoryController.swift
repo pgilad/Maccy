@@ -271,7 +271,9 @@ final class HistoryController {
     panel.nameFieldStringValue = "Clipboard Image.png"
     panel.level = .screenSaver + 1
     NSApp.activate()
-    guard panel.runModal() == .OK, let url = panel.url else {
+    let response = panel.runModal()
+    NSApp.returnFocusIfIdle()
+    guard response == .OK, let url = panel.url else {
       return
     }
     let png = ImageProcessing.pngData(from: data) ?? data

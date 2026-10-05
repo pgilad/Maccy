@@ -1,5 +1,6 @@
 #if DEBUG
 import AppKit
+import Carbon
 import MaccyCore
 import SwiftUI
 
@@ -213,6 +214,31 @@ final class SelfTest {
     let intermediate = heights.filter { $0 != generalHeight && $0 != finalHeight }
     print("  settings heights: \(Array(NSOrderedSet(array: heights)))")
     check(finalHeight < generalHeight && intermediate.isEmpty, "settings tab switch has no animation")
+    check(!settings.styleMask.contains(.miniaturizable), "settings window has no minimize button, like Apple's settings")
+    let reopened = SettingsWindowController.makeWindow(preferences: preferences, controller: controller)
+    check((reopened.contentViewController as? NSTabViewController)?.selectedTabViewItemIndex == 3, "settings reopen on the last tab")
+
+    // 14. Right-click: a point on a row finds that row; a point in the search bar finds none.
+    model.prepareForOpen(target: nil)
+    await waitUntil { !model.isSearching && !model.rows.isEmpty }
+    let host = NSHostingView(rootView: ClipboardView(model: model))
+    let panelWindow = NSWindow(contentRect: NSRect(x: -20_000, y: -20_000, width: 780, height: 500), styleMask: .borderless, backing: .buffered, defer: false)
+    panelWindow.contentView = host
+    panelWindow.orderFrontRegardless()
+    await waitUntil(timeout: .seconds(3)) { model.rowFrames[model.rows[0].id] != nil }
+    let firstRow = model.rowFrames[model.rows[0].id] ?? .zero
+    // Window coordinates have a bottom-left origin.
+    let onRow = NSPoint(x: firstRow.midX, y: host.bounds.height - firstRow.midY)
+    let inSearchBar = NSPoint(x: 200, y: host.bounds.height - 20)
+    check(PanelController.rowID(at: onRow, in: host, model: model) == model.rows[0].id, "right-click finds the row under the pointer")
+    check(PanelController.rowID(at: inSearchBar, in: host, model: model) == nil, "right-click outside the list finds no row")
+    panelWindow.orderOut(nil)
+
+    // 15. Menus: About in the app menu, and the global shortcut as a menu key equivalent.
+    let appMenu = AppMenu.make().items.first?.submenu
+    check(appMenu?.items.first?.action == #selector(AppDelegate.showAbout(_:)), "app menu starts with About Maccy")
+    check(KeyCombo(keyCode: UInt16(kVK_F5), modifiers: .option).menuKeyEquivalent == String(Character(NSEvent.SpecialKey.f5.unicodeScalar)),
+          "a function-key shortcut becomes a menu key equivalent")
 
     print("\nSelf-test: \(passes) passed, \(failures) failed")
     return failures == 0

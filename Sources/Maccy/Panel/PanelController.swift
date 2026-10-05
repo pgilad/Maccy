@@ -25,6 +25,8 @@ final class FloatingPanel: NSPanel {
     animationBehavior = .none
     minSize = NSSize(width: 560, height: 340)
     identifier = NSUserInterfaceItemIdentifier("com.pgilad.Maccy.panel")
+    // Not shown (no title bar), but VoiceOver reads it.
+    title = "Clipboard History"
   }
 
   override var canBecomeKey: Bool { true }
@@ -49,7 +51,7 @@ final class PanelController: NSObject, NSWindowDelegate {
   let model: PanelModel
   private let preferences: Preferences
   private let panel = FloatingPanel()
-  private var keyMonitor: Any?
+  private var eventMonitor: Any?
   private var hotKeySuspended = false
   private var cycleState = CycleState.idle
   private(set) var isOpen = false
@@ -109,7 +111,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     // While open, the local monitor handles the hot key (toggle and cycle).
     HotKeyCenter.shared.suspend()
     hotKeySuspended = true
-    installKeyMonitor()
+    installEventMonitor()
     statusButton?.highlight(source == .statusItem)
   }
 
@@ -120,10 +122,10 @@ final class PanelController: NSObject, NSWindowDelegate {
     isOpen = false
     cycleState = .idle
     panel.orderOut(nil)
-    if let keyMonitor {
-      NSEvent.removeMonitor(keyMonitor)
+    if let eventMonitor {
+      NSEvent.removeMonitor(eventMonitor)
     }
-    keyMonitor = nil
+    eventMonitor = nil
     if hotKeySuspended {
       HotKeyCenter.shared.resume()
       hotKeySuspended = false
@@ -225,15 +227,47 @@ final class PanelController: NSObject, NSWindowDelegate {
     return nil
   }
 
-  // MARK: - Keyboard
+  // MARK: - Keyboard and mouse
 
-  private func installKeyMonitor() {
-    keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
+  private func installEventMonitor() {
+    let events: NSEvent.EventTypeMask = [.keyDown, .flagsChanged, .leftMouseDown, .rightMouseDown]
+    eventMonitor = NSEvent.addLocalMonitorForEvents(matching: events) { [weak self] event in
       guard let self, self.isOpen, event.window === self.panel else {
         return event
       }
-      return event.type == .flagsChanged ? self.handleFlagsChanged(event) : self.handleKeyDown(event)
+      switch event.type {
+      case .flagsChanged: return self.handleFlagsChanged(event)
+      case .keyDown: return self.handleKeyDown(event)
+      default: return self.handleMouseDown(event)
+      }
     }
+  }
+
+  /// Right-click or ⌃-click on a row selects it and shows its actions, like a
+  /// context menu in Finder. The menu is the same as the ⌘K menu.
+  private func handleMouseDown(_ event: NSEvent) -> NSEvent? {
+    let isSecondaryClick = event.type == .rightMouseDown || event.modifierFlags.contains(.control)
+    guard isSecondaryClick, model.editorText == nil, let view = panel.contentView,
+          let id = Self.rowID(at: event.locationInWindow, in: view, model: model) else {
+      return event
+    }
+    let location = view.convert(event.locationInWindow, from: nil)
+    Task {
+      await model.select(id)
+      guard isOpen else {
+        return
+      }
+      ActionMenu.make(model.actions).popUp(positioning: nil, at: location, in: view)
+    }
+    return nil
+  }
+
+  /// The row under a point in window coordinates. `view` hosts `ClipboardView`.
+  static func rowID(at locationInWindow: NSPoint, in view: NSView, model: PanelModel) -> Int64? {
+    let location = view.convert(locationInWindow, from: nil)
+    // SwiftUI frames have a top-left origin.
+    let point = view.isFlipped ? location : NSPoint(x: location.x, y: view.bounds.height - location.y)
+    return model.rowID(at: point)
   }
 
   private func handleFlagsChanged(_ event: NSEvent) -> NSEvent? {
@@ -280,6 +314,12 @@ final class PanelController: NSObject, NSWindowDelegate {
         cycleState = .cycling
         model.moveNextWrapping()
       }
+      return nil
+    }
+
+    // The panel has no close button, so the Close menu item cannot close it.
+    if keyCode == kVK_ANSI_W && modifiers == .command {
+      close()
       return nil
     }
 

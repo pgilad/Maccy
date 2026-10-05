@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       controller: controller,
       onToggle: { [weak self] in self?.panel.toggle(from: .statusItem) },
       onOpenSettings: { [weak self] in self?.openSettings() },
+      onOpenAbout: { [weak self] in self?.showAbout(nil) },
       onWillShowMenu: { [weak self] in self?.panel.close() }
     )
     panel.statusButton = statusItem.button
@@ -48,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     trackFrontmostApp()
     observePreferences()
+    returnFocusWhenWindowsClose()
     // Scripts can pause capture with `defaults write … ignoreEvents`.
     pauseObserver = DefaultsObserver(keys: [Preferences.Key.ignoreEvents, Preferences.Key.ignoreOnlyNextEvent]) { [weak self] in
       self?.preferences.refreshPauseState()
@@ -86,6 +88,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     openSettings()
   }
 
+  @objc func showAbout(_ sender: Any?) {
+    panel.close()
+    NSApp.activate()
+    var options: [NSApplication.AboutPanelOptionKey: Any] = [:]
+    // The app is built from source, so show which commit is running.
+    if let commit = Bundle.main.object(forInfoDictionaryKey: "MaccyGitCommit") as? String {
+      let style = NSMutableParagraphStyle()
+      style.alignment = .center
+      options[.credits] = NSAttributedString(string: "Built from commit \(commit)", attributes: [
+        .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+        .foregroundColor: NSColor.secondaryLabelColor,
+        .paragraphStyle: style,
+      ])
+    }
+    NSApp.orderFrontStandardAboutPanel(options: options)
+  }
+
   private func confirmClearHistory() {
     panel.close()
     NSApp.activate()
@@ -95,8 +114,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     alert.addButton(withTitle: "Delete")
     alert.addButton(withTitle: "Cancel")
     alert.buttons.first?.hasDestructiveAction = true
-    if alert.runModal() == .alertFirstButtonReturn {
+    let response = alert.runModal()
+    NSApp.returnFocusIfIdle()
+    if response == .alertFirstButtonReturn {
       Task { await controller.clearHistory(keepPinned: true) }
+    }
+  }
+
+  private func returnFocusWhenWindowsClose() {
+    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { _ in
+      // The closing window is still visible now. Check after it is gone.
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          NSApp.returnFocusIfIdle()
+        }
+      }
     }
   }
 
@@ -149,6 +181,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
       },
     ]
+  }
+}
+
+extension NSApplication {
+  /// Maccy activates to show Settings, the About panel, an alert or a save panel.
+  /// When the last of them closes, the app that the user worked in gets the focus
+  /// back. Without this, Maccy stays active with no window and its menus in the menu bar.
+  func returnFocusIfIdle() {
+    let hasWindow = windows.contains { $0.isVisible && $0.level == .normal && $0.canBecomeKey }
+    if isActive && !hasWindow {
+      // Hiding an app activates the app behind it. The panel still opens: ordering it front unhides Maccy.
+      hide(nil)
+    }
   }
 }
 

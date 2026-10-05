@@ -1,5 +1,6 @@
 import Combine
 import MaccyCore
+import ServiceManagement
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -8,9 +9,9 @@ import UniformTypeIdentifiers
 struct GeneralSettings: View {
   @Bindable var preferences: Preferences
   @ViewState private var launchAtLogin = LaunchAtLogin.isEnabled
+  @ViewState private var loginItemNeedsApproval = LaunchAtLogin.needsApproval
   @ViewState private var accessibility = Permissions.accessibilityGranted
   @ViewState private var pasteboardAccess = Permissions.pasteboardAccessDescription
-  private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
   var body: some View {
     Form {
@@ -35,15 +36,21 @@ struct GeneralSettings: View {
       }
 
       Section("Startup") {
-        Toggle("Open at login", isOn: $launchAtLogin)
-          .onChange(of: launchAtLogin) { _, enabled in
-            LaunchAtLogin.set(enabled)
-            launchAtLogin = LaunchAtLogin.isEnabled
+        Toggle("Open at login", isOn: Binding(get: { launchAtLogin }, set: { enabled in
+          LaunchAtLogin.set(enabled)
+          refreshStatus()
+        }))
+        if loginItemNeedsApproval {
+          HStack {
+            Text("Approve Maccy in System Settings › General › Login Items.")
+              .font(.caption)
+              .foregroundStyle(.orange)
+            Spacer()
+            Button("Open Login Items") {
+              SMAppService.openSystemSettingsLoginItems()
+            }
+            .controlSize(.small)
           }
-        if LaunchAtLogin.needsApproval {
-          Text("Approve Maccy in System Settings › General › Login Items.")
-            .font(.caption)
-            .foregroundStyle(.orange)
         }
       }
 
@@ -80,10 +87,17 @@ struct GeneralSettings: View {
       }
     }
     .formStyle(.grouped)
-    .onReceive(timer) { _ in
-      accessibility = Permissions.accessibilityGranted
-      pasteboardAccess = Permissions.pasteboardAccessDescription
+    // The user changes these in System Settings, then comes back to Maccy.
+    .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+      refreshStatus()
     }
+  }
+
+  private func refreshStatus() {
+    accessibility = Permissions.accessibilityGranted
+    pasteboardAccess = Permissions.pasteboardAccessDescription
+    launchAtLogin = LaunchAtLogin.isEnabled
+    loginItemNeedsApproval = LaunchAtLogin.needsApproval
   }
 
   private var returnKeyDescription: String {
@@ -203,6 +217,8 @@ struct HistorySettings: View {
           await refreshStats()
         }
       }
+    } message: {
+      Text("You cannot undo this.")
     }
     .confirmationDialog("Delete all items, pinned items too?", isPresented: $confirmClearAll) {
       Button("Delete All", role: .destructive) {
@@ -211,6 +227,8 @@ struct HistorySettings: View {
           await refreshStats()
         }
       }
+    } message: {
+      Text("You cannot undo this.")
     }
   }
 

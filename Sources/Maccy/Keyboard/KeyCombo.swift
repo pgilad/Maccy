@@ -65,6 +65,28 @@ struct KeyCombo: Codable, Hashable, Sendable {
     return KeyboardLayout.character(forKeyCode: keyCode)?.uppercased() ?? "#\(keyCode)"
   }
 
+  /// The key as an `NSMenuItem` key equivalent, so a menu can show the shortcut.
+  var menuKeyEquivalent: String? {
+    switch Int(keyCode) {
+    case kVK_Space: return " "
+    case kVK_Escape: return "\u{1B}"
+    default: break
+    }
+    if let key = Self.specialMenuKeys[Int(keyCode)] {
+      return String(Character(key.unicodeScalar))
+    }
+    return KeyboardLayout.character(forKeyCode: keyCode)?.lowercased()
+  }
+
+  private static let specialMenuKeys: [Int: NSEvent.SpecialKey] = [
+    kVK_Return: .carriageReturn, kVK_Tab: .tab, kVK_Delete: .backspace, kVK_ForwardDelete: .deleteForward,
+    kVK_LeftArrow: .leftArrow, kVK_RightArrow: .rightArrow, kVK_UpArrow: .upArrow, kVK_DownArrow: .downArrow,
+    kVK_Home: .home, kVK_End: .end, kVK_PageUp: .pageUp, kVK_PageDown: .pageDown, kVK_ANSI_KeypadEnter: .enter,
+    kVK_F1: .f1, kVK_F2: .f2, kVK_F3: .f3, kVK_F4: .f4, kVK_F5: .f5, kVK_F6: .f6, kVK_F7: .f7, kVK_F8: .f8,
+    kVK_F9: .f9, kVK_F10: .f10, kVK_F11: .f11, kVK_F12: .f12, kVK_F13: .f13, kVK_F14: .f14, kVK_F15: .f15,
+    kVK_F16: .f16, kVK_F17: .f17, kVK_F18: .f18, kVK_F19: .f19, kVK_F20: .f20,
+  ]
+
   private static let functionKeys: Set<Int> = [
     kVK_F1, kVK_F2, kVK_F3, kVK_F4, kVK_F5, kVK_F6, kVK_F7, kVK_F8, kVK_F9, kVK_F10,
     kVK_F11, kVK_F12, kVK_F13, kVK_F14, kVK_F15, kVK_F16, kVK_F17, kVK_F18, kVK_F19, kVK_F20,

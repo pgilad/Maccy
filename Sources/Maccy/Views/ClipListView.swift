@@ -36,16 +36,52 @@ struct ClipListView: View {
             .simultaneousGesture(TapGesture().onEnded {
               model.selectedID = hit.id
             })
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(ClipboardView.coordinateSpace)) } action: { frame in
+              model.rowFrames[hit.id] = frame
+            }
+            .onDisappear {
+              model.rowFrames[hit.id] = nil
+            }
+            .accessibilityAction {
+              model.selectedID = hit.id
+              model.performPrimary()
+            }
+            .accessibilityAction(.showMenu) {
+              Task {
+                await model.select(hit.id)
+                model.onShowActions()
+              }
+            }
           }
         }
         .padding(6)
+      }
+      .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(ClipboardView.coordinateSpace)) } action: { frame in
+        model.listFrame = frame
       }
       .onChange(of: model.selectedID) { _, id in
         if let id {
           proxy.scrollTo(id)
         }
+        announceSelection()
       }
     }
+  }
+
+  /// Focus stays in the search field while ↑ ↓ move the selection, so VoiceOver
+  /// does not move with it. Read the selected item aloud, like Spotlight.
+  private func announceSelection() {
+    guard NSWorkspace.shared.isVoiceOverEnabled, let row = model.selectedRow else {
+      return
+    }
+    NSAccessibility.post(
+      element: NSApp.keyWindow ?? NSApp as Any,
+      notification: .announcementRequested,
+      userInfo: [
+        .announcement: ClipRow.accessibilityLabel(for: row.summary),
+        .priority: NSAccessibilityPriorityLevel.high.rawValue,
+      ]
+    )
   }
 
   /// "Pinned" above the pinned rows and "Recent" above the others, when no search runs.
@@ -129,8 +165,8 @@ struct ClipRow: View {
     }
     .contentShape(.rect)
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(accessibilityLabel)
-    .accessibilityAddTraits(isSelected ? .isSelected : [])
+    .accessibilityLabel(Self.accessibilityLabel(for: hit.summary))
+    .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
   }
 
   @ViewBuilder
@@ -172,12 +208,12 @@ struct ClipRow: View {
       .foregroundStyle(isSelected ? .white.opacity(0.9) : .secondary)
   }
 
-  private var accessibilityLabel: String {
-    var parts = [hit.summary.kind.name, hit.summary.title]
-    if let app = hit.summary.appName {
+  static func accessibilityLabel(for summary: ClipSummary) -> String {
+    var parts = [summary.kind.name, summary.title]
+    if let app = summary.appName {
       parts.append(app)
     }
-    if hit.summary.isPinned {
+    if summary.isPinned {
       parts.append("pinned")
     }
     return parts.joined(separator: ", ")

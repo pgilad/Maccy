@@ -49,6 +49,11 @@ final class PanelModel {
   /// The text in the "Edit and Paste" editor, or `nil` when the editor is closed.
   var editorText: String?
 
+  /// Row frames and the visible list frame in the panel (top-left origin), for
+  /// right-click hit testing. The views write them. Nothing observes them.
+  @ObservationIgnored var rowFrames: [Int64: CGRect] = [:]
+  @ObservationIgnored var listFrame = CGRect.zero
+
   /// Set by the panel controller.
   @ObservationIgnored var onOpenSettings: () -> Void = {}
   @ObservationIgnored var onShowActions: () -> Void = {}
@@ -58,6 +63,7 @@ final class PanelModel {
   /// A selection reset that a later search must not drop (a capture can cancel a keystroke's search).
   @ObservationIgnored private var pendingSelectionReset = false
   @ObservationIgnored private var detailTask: Task<Void, Never>?
+  @ObservationIgnored private var imageTask: Task<Void, Never>?
   @ObservationIgnored private var thumbnailRequests: Set<Int64> = []
 
   init(controller: HistoryController) {
@@ -157,6 +163,22 @@ final class PanelModel {
     selectedID = rows.last?.id
   }
 
+  /// The visible row at a point in the panel.
+  func rowID(at point: CGPoint) -> Int64? {
+    guard listFrame.contains(point),
+          let id = rowFrames.first(where: { $0.value.contains(point) })?.key,
+          rows.contains(where: { $0.id == id }) else {
+      return nil
+    }
+    return id
+  }
+
+  /// Selects a row and waits for its detail, so `actions` lists all actions for it.
+  func select(_ id: Int64) async {
+    selectedID = id
+    await detailTask?.value
+  }
+
   /// Cycle mode wraps around at the end.
   func moveNextWrapping() {
     guard let index = selectedIndex, !rows.isEmpty else {
@@ -176,13 +198,13 @@ final class PanelModel {
 
   private func loadDetail() {
     detailTask?.cancel()
+    imageTask?.cancel()
     guard let id = selectedID else {
       detail = nil
       previewImage = nil
       return
     }
     let store = controller.store
-    let kind = selectedRow?.summary.kind
     if detail?.summary.id != id {
       previewImage = nil
     }
@@ -192,9 +214,12 @@ final class PanelModel {
         return
       }
       self.detail = detail
-      guard kind == .image, previewImage == nil else {
-        return
-      }
+    }
+    // A separate task: the actions menu waits for the detail, not for the image.
+    guard selectedRow?.summary.kind == .image, previewImage == nil else {
+      return
+    }
+    imageTask = Task {
       let image = await Self.loadPreviewImage(id: id, store: store)
       guard !Task.isCancelled else {
         return

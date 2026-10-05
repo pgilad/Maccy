@@ -135,6 +135,7 @@ final class Preferences {
     static let windowAnchorX = "windowAnchorX"
     static let windowAnchorY = "windowAnchorY"
     static let didShowOnboarding = "didShowOnboarding"
+    static let settingsTab = "settingsTab"
     // The names below match upstream Maccy, so `defaults write <bundle id> ignoreEvents true` still works.
     static let ignoreEvents = "ignoreEvents"
     static let ignoreOnlyNextEvent = "ignoreOnlyNextEvent"
@@ -187,6 +188,8 @@ final class Preferences {
     }
   }
   var didShowOnboarding: Bool { didSet { defaults.set(didShowOnboarding, forKey: Key.didShowOnboarding) } }
+  /// The last tab of the Settings window.
+  var settingsTab: Int { didSet { defaults.set(settingsTab, forKey: Key.settingsTab) } }
 
   /// Capture is paused. Other processes can change this key, see `refreshPauseState()`.
   var ignoreEvents: Bool { didSet { defaults.set(ignoreEvents, forKey: Key.ignoreEvents) } }
@@ -253,6 +256,7 @@ final class Preferences {
     windowSize = CGSize(width: defaults.double(forKey: Key.windowWidth), height: defaults.double(forKey: Key.windowHeight))
     windowAnchor = CGPoint(x: defaults.double(forKey: Key.windowAnchorX), y: defaults.double(forKey: Key.windowAnchorY))
     didShowOnboarding = defaults.bool(forKey: Key.didShowOnboarding)
+    settingsTab = defaults.integer(forKey: Key.settingsTab)
     ignoreEvents = defaults.bool(forKey: Key.ignoreEvents)
     ignoreOnlyNextEvent = defaults.bool(forKey: Key.ignoreOnlyNextEvent)
     let pauseTimestamp = defaults.double(forKey: Key.pauseUntil)
