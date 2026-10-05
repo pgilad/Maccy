@@ -50,13 +50,12 @@ enum SnapshotRenderer {
     await settle(model)
     ok = save(panel(model), size: preferences.windowSize, to: directory.appending(path: "panel-empty.png")) && ok
 
-    // Settings use AppKit-backed form controls. Draw them through a hosting view in
-    // an offscreen window, which renders those controls, unlike ImageRenderer.
-    let settingsSize = CGSize(width: 560, height: 1_150)
-    ok = await saveWindowSnapshot(GeneralSettings(preferences: preferences), size: settingsSize, to: directory.appending(path: "settings-general.png")) && ok
-    ok = await saveWindowSnapshot(HistorySettings(preferences: preferences, controller: controller), size: settingsSize, to: directory.appending(path: "settings-history.png")) && ok
-    ok = await saveWindowSnapshot(PrivacySettings(preferences: preferences), size: settingsSize, to: directory.appending(path: "settings-privacy.png")) && ok
-    ok = await saveWindowSnapshot(AdvancedSettings(preferences: preferences), size: settingsSize, to: directory.appending(path: "settings-advanced.png")) && ok
+    // Settings use AppKit-backed controls and a toolbar. Draw the real window
+    // (frame view included) offscreen, which ImageRenderer cannot do.
+    for (index, name) in ["general", "history", "privacy", "advanced"].enumerated() {
+      let window = SettingsWindowController.makeWindow(preferences: preferences, controller: controller, selectedTab: index)
+      ok = await saveWindowSnapshot(window, to: directory.appending(path: "settings-\(name).png")) && ok
+    }
     print(ok ? "Snapshots written to \(directory.path)" : "Some snapshots failed")
     return ok
   }
@@ -81,21 +80,23 @@ enum SnapshotRenderer {
     }
   }
 
-  private static func saveWindowSnapshot(_ view: some View, size: CGSize, to url: URL) async -> Bool {
-    let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled], backing: .buffered, defer: false)
+  private static func saveWindowSnapshot(_ window: NSWindow, to url: URL) async -> Bool {
     window.appearance = NSAppearance(named: .aqua)
-    let hosting = NSHostingView(rootView: view.frame(width: size.width, height: size.height))
-    window.contentView = hosting
+    // Far off screen, so nothing shows while the window draws.
+    window.setFrameOrigin(NSPoint(x: -20_000, y: -20_000))
+    window.orderFrontRegardless()
+    defer { window.orderOut(nil) }
     // Let SwiftUI finish layout and the first async loads (for example storage stats).
-    for _ in 0..<5 {
-      hosting.layoutSubtreeIfNeeded()
+    for _ in 0..<6 {
+      window.contentView?.layoutSubtreeIfNeeded()
       try? await Task.sleep(for: .milliseconds(100))
     }
-    guard let rep = hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds) else {
+    guard let frameView = window.contentView?.superview,
+          let rep = frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds) else {
       print("FAIL \(url.lastPathComponent)")
       return false
     }
-    hosting.cacheDisplay(in: hosting.bounds, to: rep)
+    frameView.cacheDisplay(in: frameView.bounds, to: rep)
     guard let data = rep.representation(using: .png, properties: [:]), (try? data.write(to: url)) != nil else {
       print("FAIL \(url.lastPathComponent)")
       return false

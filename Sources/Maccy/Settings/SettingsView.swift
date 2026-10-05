@@ -3,30 +3,6 @@ import MaccyCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct SettingsView: View {
-  let preferences: Preferences
-  let controller: HistoryController
-
-  var body: some View {
-    TabView {
-      Tab("General", systemImage: "gearshape") {
-        GeneralSettings(preferences: preferences)
-      }
-      Tab("History", systemImage: "clock.arrow.circlepath") {
-        HistorySettings(preferences: preferences, controller: controller)
-      }
-      Tab("Privacy", systemImage: "hand.raised") {
-        PrivacySettings(preferences: preferences)
-      }
-      Tab("Advanced", systemImage: "slider.horizontal.3") {
-        AdvancedSettings(preferences: preferences)
-      }
-    }
-    .frame(width: 560)
-    .frame(minHeight: 460)
-  }
-}
-
 // MARK: - General
 
 struct GeneralSettings: View {
@@ -434,15 +410,11 @@ struct AdvancedSettings: View {
       }
 
       Section {
-        LabeledContent("Check the clipboard every") {
-          Picker("", selection: $preferences.pollInterval) {
-            Text("0.1 s").tag(0.1)
-            Text("0.25 s").tag(0.25)
-            Text("0.5 s").tag(0.5)
-            Text("1 s").tag(1.0)
-          }
-          .labelsHidden()
-          .frame(width: 120)
+        Picker("Check the clipboard every", selection: $preferences.pollInterval) {
+          Text("0.1 s").tag(0.1)
+          Text("0.25 s").tag(0.25)
+          Text("0.5 s").tag(0.5)
+          Text("1 s").tag(1.0)
         }
       } footer: {
         Text("macOS has no clipboard change event. Maccy compares a change counter, which reads no content.")
