@@ -7,9 +7,21 @@ public enum SecretDetector {
     let regex: NSRegularExpression
   }
 
-  /// The end of a token that can contain `-`. `\b` fails after a final `-`, so a
-  /// key that ends with `-` (about 1 in 64 for base64url) would not match.
-  private static let tokenEnd = "(?![A-Za-z0-9_-])"
+  /// The base64url characters of most tokens.
+  private static let base64URL = "A-Za-z0-9_-"
+
+  /// A token whose characters include `-`: `prefix`, then `body`, made of the
+  /// characters in the class `characters`. `\b` does not work for these tokens:
+  /// - At the end, `\b` fails after a final `-`, so a key that ends with `-` (about
+  ///   1 in 64 for base64url) did not match.
+  /// - At the start, `\b` lets a match start after each `-` inside a run such as
+  ///   `xoxb-xoxb-…`, and each start scans to the end of the run: quadratic time,
+  ///   12 s for 50 KB.
+  /// So the token cannot start or end next to one of its own characters. Then each
+  /// run is scanned once, and the scan stays linear.
+  private static func token(_ prefix: String, _ body: String, characters: String) -> String {
+    "(?<![\(characters)])\(prefix)\(body)(?![\(characters)])"
+  }
 
   // Patterns are anchored on well-known token prefixes to keep false positives low.
   // Order matters: the first match names the secret, so a specific rule comes first.
@@ -17,21 +29,24 @@ public enum SecretDetector {
     ("AWS access key", #"\b(AKIA|ASIA|ABIA|ACCA)[0-9A-Z]{16}\b"#),
     ("GitHub token", #"\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}\b"#),
     ("GitHub token", #"\bgithub_pat_[A-Za-z0-9_]{60,}\b"#),
-    ("GitLab token", #"\bglpat-[A-Za-z0-9_-]{20,}"# + tokenEnd),
+    ("GitLab token", token("glpat-", "[\(base64URL)]{20,}", characters: base64URL)),
     // Bot, user, app, refresh and configuration tokens (xoxe.xoxp-… matches at xoxp-).
-    ("Slack token", #"\bxox[abeoprs]-[A-Za-z0-9-]{10,}"# + tokenEnd),
-    ("Slack token", #"\bxapp-\d-[A-Za-z0-9-]{10,}"# + tokenEnd),
+    ("Slack token", token("xox[abeoprs]-", "[A-Za-z0-9-]{10,}", characters: "A-Za-z0-9-")),
+    ("Slack token", token(#"xapp-\d-"#, "[A-Za-z0-9-]{10,}", characters: "A-Za-z0-9-")),
     ("Slack webhook", #"https://hooks\.slack\.com/services/[A-Za-z0-9/_-]{20,}"#),
     ("Stripe key", #"\b[rs]k_(live|test)_[A-Za-z0-9]{20,}\b"#),
-    ("Google API key", #"\bAIza[0-9A-Za-z_-]{35}"# + tokenEnd),
-    ("Anthropic key", #"\bsk-ant-[A-Za-z0-9_-]{32,}"# + tokenEnd),
+    // Exactly 35 characters, so each start scans at most 35: `\b` at the start is fine.
+    ("Google API key", #"\bAIza[\#(base64URL)]{35}(?![\#(base64URL)])"#),
+    ("Anthropic key", token("sk-ant-", "[\(base64URL)]{32,}", characters: base64URL)),
     // Project, service account and admin keys, then the two older formats. A plain
     // `sk-` with dashes is often a branch name (sk-1234-fix-login), so it does not match.
-    ("OpenAI key", #"\bsk-(proj|svcacct|admin)-[A-Za-z0-9_-]{40,}"# + tokenEnd),
+    ("OpenAI key", token("sk-(proj|svcacct|admin)-", "[\(base64URL)]{40,}", characters: base64URL)),
     ("OpenAI key", #"\bsk-[A-Za-z0-9]{20}T3BlbkFJ[A-Za-z0-9]{20}\b"#),
     ("OpenAI key", #"\bsk-[A-Za-z0-9]{48}\b"#),
     ("npm token", #"\bnpm_[A-Za-z0-9]{36}\b"#),
-    ("JSON Web Token", #"\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{16,}"# + tokenEnd),
+    ("JSON Web Token", token(
+      "eyJ", #"[\#(base64URL)]{8,}\.eyJ[\#(base64URL)]{8,}\.[\#(base64URL)]{16,}"#, characters: base64URL
+    )),
     // RSA, EC, OPENSSH, ENCRYPTED and PGP (… PRIVATE KEY BLOCK) keys.
     ("Private key", #"-----BEGIN ([A-Z0-9]+ ){0,3}PRIVATE KEY( BLOCK)?-----"#),
     ("Azure connection string", #"AccountKey=[A-Za-z0-9+/=]{40,}"#),
@@ -40,8 +55,9 @@ public enum SecretDetector {
   }
 
   /// Returns the name of the first rule that matches, or `nil`.
-  /// Each rule is anchored on a prefix, so the scan is linear: about 1 s for 20 MB
-  /// (the largest text that Maccy saves). It runs off the main thread.
+  /// Each rule is anchored on a prefix and scans each run of token characters once,
+  /// so the scan is linear: about 1 s for 20 MB (the largest text that Maccy saves),
+  /// also for crafted text. It runs off the main thread.
   public static func detect(in text: String) -> String? {
     guard !text.isEmpty else {
       return nil

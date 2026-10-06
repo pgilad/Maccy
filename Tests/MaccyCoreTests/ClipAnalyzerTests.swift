@@ -224,6 +224,29 @@ import UniformTypeIdentifiers
     #expect(SecretDetector.detect(in: FakeSecrets.openAIProjectKey) == "OpenAI key")
   }
 
+  @Test func everyRuleCompiles() {
+    // The rules drop a pattern that does not compile, with no error. Update the count with the list.
+    #expect(SecretDetector.rules.count == 17)
+  }
+
+  @Test func craftedTextTakesLinearTime() {
+    // Each input took seconds with `\b` at the start of the token rules (xoxb: 12 s, eyJ: 32 s).
+    let inputs = [
+      String(repeating: "xoxb-", count: 10_000) + "_",
+      String(repeating: "eyJ-", count: 20_000),
+      String(repeating: "glpat-", count: 10_000) + "!",
+      String(repeating: "sk-ant-", count: 10_000) + "!",
+      String(repeating: "sk-proj-", count: 10_000) + "!",
+      String(repeating: "xapp-1-", count: 10_000) + "!",
+      String(repeating: "eyJabcdefghij.", count: 10_000),
+    ]
+    let start = ContinuousClock.now
+    for text in inputs {
+      _ = SecretDetector.detect(in: text)
+    }
+    #expect(ContinuousClock.now - start < .seconds(1))
+  }
+
   @Test func secretDeepInLargeTextIsDetected() {
     let log = String(repeating: "INFO request served in 12 ms\n", count: 5_000)
     #expect(log.utf16.count > 100_000)
