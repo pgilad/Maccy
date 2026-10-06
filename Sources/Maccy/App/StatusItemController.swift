@@ -132,7 +132,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       menu.addItem(withTitle: "Skip Next Copy", action: #selector(skipNext), keyEquivalent: "").target = self
     }
     menu.addItem(.separator())
-    menu.addItem(withTitle: "About Maccy", action: #selector(openAbout), keyEquivalent: "").target = self
+    // macOS adds icons to Settings and Quit, and to About only with the standard
+    // About action. Without an icon, About is indented to align with Settings.
+    let about = menu.addItem(withTitle: "About Maccy", action: #selector(openAbout), keyEquivalent: "")
+    about.target = self
+    about.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)
     menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
     menu.addItem(.separator())
     menu.addItem(withTitle: "Quit Maccy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
