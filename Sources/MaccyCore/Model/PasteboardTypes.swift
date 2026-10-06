@@ -1,4 +1,5 @@
-/// Pasteboard type identifiers as plain strings, so the core does not depend on AppKit.
+/// Pasteboard type identifiers as plain strings, so the core needs no `NSPasteboard`.
+/// The core imports AppKit only to read RTF (`ClipAnalyzer.plainText(in:)`).
 public enum PasteboardTypes {
   public static let string = "public.utf8-plain-text"
   public static let rtf = "public.rtf"

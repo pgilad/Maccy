@@ -17,13 +17,15 @@ let package = Package(
     .target(
       name: "MaccyCore",
       swiftSettings: concurrencySettings,
-      linkerSettings: [.linkedLibrary("sqlite3"), .linkedFramework("AppKit")]
+      // The core uses AppKit only through an Objective-C initializer (RTF), which
+      // references no AppKit symbol. Without this setting, the linker drops AppKit
+      // from the test bundle and the RTF test crashes. SQLite3 links from its import.
+      linkerSettings: [.linkedFramework("AppKit")]
     ),
     .executableTarget(
       name: "Maccy",
       dependencies: ["MaccyCore"],
-      swiftSettings: concurrencySettings + [.defaultIsolation(MainActor.self)],
-      linkerSettings: [.linkedFramework("Carbon")]
+      swiftSettings: concurrencySettings + [.defaultIsolation(MainActor.self)]
     ),
     .testTarget(
       name: "MaccyCoreTests",
