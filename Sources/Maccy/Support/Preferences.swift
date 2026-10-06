@@ -83,21 +83,32 @@ enum MenuIcon: String, CaseIterable, Identifiable {
 
   var id: Self { self }
 
+  /// The VoiceOver name in the icon picker. The status item has its own label.
+  var title: String {
+    switch self {
+    case .maccy: "Maccy"
+    case .clipboard: "Clipboard"
+    case .scissors: "Scissors"
+    case .paperclip: "Paper clip"
+    }
+  }
+
   var image: NSImage {
     let image: NSImage?
     switch self {
     case .maccy:
       image = Bundle.main.image(forResource: "StatusBarIcon")
-        ?? NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Maccy")
+        ?? NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: nil)
     case .clipboard:
-      image = NSImage(systemSymbolName: "clipboard", accessibilityDescription: "Maccy")
+      image = NSImage(systemSymbolName: "clipboard", accessibilityDescription: nil)
     case .scissors:
-      image = NSImage(systemSymbolName: "scissors", accessibilityDescription: "Maccy")
+      image = NSImage(systemSymbolName: "scissors", accessibilityDescription: nil)
     case .paperclip:
-      image = NSImage(systemSymbolName: "paperclip", accessibilityDescription: "Maccy")
+      image = NSImage(systemSymbolName: "paperclip", accessibilityDescription: nil)
     }
     let result = image ?? NSImage()
     result.isTemplate = true
+    result.accessibilityDescription = title
     return result
   }
 }

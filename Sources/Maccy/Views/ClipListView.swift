@@ -216,6 +216,13 @@ struct ClipRow: View {
     if summary.isPinned {
       parts.append("pinned")
     }
+    // The lock icon has no VoiceOver text, so say it here, with the delete time.
+    if summary.isSensitive {
+      parts.append("looks like a secret")
+      if let expiresAt = summary.expiresAt {
+        parts.append("deleted \(expiresAt.formatted(.relative(presentation: .named)))")
+      }
+    }
     return parts.joined(separator: ", ")
   }
 }

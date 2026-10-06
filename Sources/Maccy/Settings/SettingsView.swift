@@ -79,7 +79,8 @@ struct GeneralSettings: View {
         Toggle("Show icon in menu bar", isOn: $preferences.showInMenuBar)
         Picker("Icon", selection: $preferences.menuIcon) {
           ForEach(MenuIcon.allCases) { icon in
-            Image(nsImage: icon.image).tag(icon)
+            // Before, three icons had the VoiceOver name "Maccy" and the first had none.
+            Image(nsImage: icon.image).accessibilityLabel(icon.title).tag(icon)
           }
         }
         .pickerStyle(.segmented)
