@@ -13,13 +13,6 @@ struct KeyCombo: Codable, Hashable, Sendable {
     self.modifierRawValue = modifiers.intersection(Self.relevantModifiers).rawValue
   }
 
-  init?(event: NSEvent) {
-    guard event.type == .keyDown else {
-      return nil
-    }
-    self.init(keyCode: event.keyCode, modifiers: event.modifierFlags)
-  }
-
   static let defaultPopup = KeyCombo(keyCode: UInt16(kVK_ANSI_C), modifiers: [.command, .shift])
 
   var modifiers: NSEvent.ModifierFlags { NSEvent.ModifierFlags(rawValue: modifierRawValue) }

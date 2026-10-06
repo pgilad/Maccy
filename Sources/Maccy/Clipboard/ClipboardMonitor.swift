@@ -74,6 +74,7 @@ nonisolated final class ClipboardMonitor: Sendable {
     _ = state.withLock { $0.ownChangeCounts.insert(changeCount) }
   }
 
+  #if DEBUG
   /// Checks the pasteboard now, on the capture queue. Self-tests use this.
   func checkNow() async {
     await withCheckedContinuation { continuation in
@@ -83,6 +84,7 @@ nonisolated final class ClipboardMonitor: Sendable {
       }
     }
   }
+  #endif
 
   private func poll() {
     let changeCount = pasteboard.changeCount

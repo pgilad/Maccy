@@ -23,9 +23,11 @@ final class HistoryController {
   /// A short message for the panel footer.
   var toast: String?
 
+  #if DEBUG
   /// Counters for the self-test, which waits for the capture pipeline.
   @ObservationIgnored private(set) var processedCaptures = 0
   @ObservationIgnored private(set) var processedOCR = 0
+  #endif
 
   /// Called after an action that must close the panel (paste, copy).
   @ObservationIgnored var closePanel: () -> Void = {}
@@ -49,13 +51,17 @@ final class HistoryController {
           if let outcome {
             self?.didIngest(outcome)
           }
+          #if DEBUG
           self?.processedCaptures += 1
+          #endif
         }
         if let image = outcome?.imageForOCR, let id = outcome?.result.id {
           await Self.recognizeText(in: image, id: id, store: store)
           await MainActor.run {
             self?.revision += 1
+            #if DEBUG
             self?.processedOCR += 1
+            #endif
           }
         }
       }
