@@ -112,6 +112,26 @@ import Testing
     #expect(try await store.search(SearchQuery.parse("/([/"), limit: 10) == .invalidRegex("(["))
   }
 
+  @Test func regexWithFiltersAndWords() async throws {
+    let store = try makeStore()
+    try await insert(store, "order 12345", app: "Slack")
+    try await insert(store, "order 999", app: "Notes")
+    try await insert(store, "order 777 shipped", app: "Notes")
+    let slack = try await store.search(SearchQuery.parse(#"/order \d+/ app:slack"#), limit: 10).hits
+    #expect(slack.map(\.summary.title) == ["order 12345"])
+    let word = try await store.search(SearchQuery.parse(#"/order \d+/ shipped"#), limit: 10).hits
+    #expect(word.map(\.summary.title) == ["order 777 shipped"])
+  }
+
+  /// Full-text syntax in a query is plain text: each term is quoted for FTS5.
+  @Test(arguments: [#"he said "hi""#, "NEAR(abc def)", "abc*", "-abc", "title:abc", #"""#, #"a"b"#, "a OR b", "{x}"])
+  func fullTextSyntaxInQueryIsPlainText(_ text: String) async throws {
+    let store = try makeStore()
+    try await insert(store, "plain words")
+    _ = try await store.search(SearchQuery.parse(text), limit: 10)
+    #expect(HistoryStore.matchExpression(["a\"b"], column: "title") == #"title : ("a""b")"#)
+  }
+
   @Test func fuzzyFallback() async throws {
     let store = try makeStore()
     try await insert(store, "git commit --amend")

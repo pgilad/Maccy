@@ -30,6 +30,36 @@ import Testing
     #expect(SearchQuery.parse("/^a.*z$/").regex == "^a.*z$")
     #expect(SearchQuery.parse("/").regex == nil)
   }
+
+  @Test func quotedFilterValue() {
+    let query = SearchQuery.parse(#"app:"Google Chrome" tab type:"image""#)
+    #expect(query.app == "Google Chrome")
+    #expect(query.kind == .image)
+    #expect(query.terms == ["tab"])
+    // Still typing: the value runs to the end.
+    #expect(SearchQuery.parse(#"app:"Google Chr"#).app == "Google Chr")
+  }
+
+  @Test func regexWithFiltersAndWords() {
+    let query = SearchQuery.parse(#"type:text /order \d+/ app:slack"#)
+    #expect(query.regex == #"order \d+"#)
+    #expect(query.kind == .text)
+    #expect(query.app == "slack")
+    #expect(query.terms.isEmpty)
+    let withSlash = SearchQuery.parse("/a/b/ word")
+    #expect(withSlash.regex == "a/b")
+    #expect(withSlash.terms == ["word"])
+  }
+
+  @Test func pathIsNotARegex() {
+    let query = SearchQuery.parse("/usr/bin")
+    #expect(query.regex == nil)
+    #expect(query.terms == ["/usr/bin"])
+  }
+
+  @Test func unbalancedQuoteIsAPhrase() {
+    #expect(SearchQuery.parse(#"say "hello wor"#).terms == ["say", "hello wor"])
+  }
 }
 
 @Suite struct FuzzyMatcherTests {

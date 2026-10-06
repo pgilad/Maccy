@@ -14,7 +14,7 @@ A fast, private clipboard manager for macOS 26 and later, built from source. It 
 - Text, rich text, links, colors, images and files. Duplicates merge and move to the top.
 - Search everywhere in the item, not only in the first line. Case- and diacritic-insensitive, ranked by match position, recency and frequency, with a fuzzy fallback.
 - Text in images is searchable (on-device OCR with Vision).
-- Type filter (⌘P) and search syntax: `type:image`, `app:slack`, `is:pinned`, `"exact phrase"`, `/regex/`.
+- Type filter (⌘P) and search syntax: `type:image`, `app:slack` (or `app:"Google Chrome"`), `is:pinned`, `"exact phrase"`, `/regex/`. Filters and words combine with a regex: `type:text /order \d+/`.
 - Actions menu (⌘K, or right-click an item; a native macOS menu): paste, copy, paste as plain text, edit and paste, open link, show in Finder, save image, copy text in image, pin, delete.
 - Pins stay at the top and are never deleted by retention.
 - Retention by age (1 day to forever), item count, and total size.

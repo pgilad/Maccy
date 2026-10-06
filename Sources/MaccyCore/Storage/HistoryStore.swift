@@ -456,13 +456,7 @@ public actor HistoryStore {
     // The trigram index needs at least three characters. Shorter terms scan with
     // maccy_contains, which folds case and diacritics like the index. LIKE folds
     // ASCII case only, so "ü" did not find "Über".
-    for term in query.terms where term.count < 3 {
-      conditions.append("""
-        (maccy_contains(items.title, ?) OR maccy_contains(items.body, ?)
-          OR maccy_contains(items.ocr, ?) OR maccy_contains(items.app_name, ?))
-        """)
-      bindings += Array(repeating: .text(term), count: 4)
-    }
+    appendScanConditions(for: query.terms.filter { $0.count < 3 }, to: &conditions, bindings: &bindings)
     appendFilters(query, to: &conditions, bindings: &bindings)
 
     // Phase 1: candidate IDs only, so the sort does not carry row data.
@@ -571,6 +565,8 @@ public actor HistoryStore {
   private func regexSearch(_ pattern: String, query: SearchQuery, limit: Int) throws -> [SearchHit] {
     var conditions = ["(maccy_regexp(?, items.title) OR maccy_regexp(?, items.body) OR maccy_regexp(?, items.ocr))"]
     var bindings: [SQLiteValue] = [.text(pattern), .text(pattern), .text(pattern)]
+    // The regex scans every row anyway, so the words next to it scan too.
+    appendScanConditions(for: query.terms, to: &conditions, bindings: &bindings)
     appendFilters(query, to: &conditions, bindings: &bindings)
     let regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
     return try database.prepare("""
@@ -586,6 +582,17 @@ public actor HistoryStore {
           .map { Ranker.characterOffsets(of: $0, in: title) }
         return SearchHit(summary: summary, titleMatches: matches)
       }
+  }
+
+  /// Each term must occur in the title, body, OCR text or app name.
+  private func appendScanConditions(for terms: [String], to conditions: inout [String], bindings: inout [SQLiteValue]) {
+    for term in terms {
+      conditions.append("""
+        (maccy_contains(items.title, ?) OR maccy_contains(items.body, ?)
+          OR maccy_contains(items.ocr, ?) OR maccy_contains(items.app_name, ?))
+        """)
+      bindings += Array(repeating: .text(term), count: 4)
+    }
   }
 
   private func appendFilters(_ query: SearchQuery, to conditions: inout [String], bindings: inout [SQLiteValue]) {
