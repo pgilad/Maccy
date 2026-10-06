@@ -91,11 +91,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       // ⌥-click pauses; ⇧⌥-click skips only the next copy (upstream Maccy behavior).
       preferences.refreshPauseState()
       if preferences.isPaused {
-        preferences.ignoreEvents = false
-        preferences.pauseUntil = nil
+        preferences.resume()
+      } else if modifiers.contains(.shift) {
+        preferences.skipNextCopy()
       } else {
-        preferences.ignoreEvents = true
-        preferences.ignoreOnlyNextEvent = modifiers.contains(.shift)
+        preferences.pause()
       }
     } else {
       onToggle()
@@ -149,25 +149,24 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   @objc private func openAbout() { onOpenAbout() }
 
   @objc private func resume() {
-    preferences.ignoreEvents = false
-    preferences.ignoreOnlyNextEvent = false
-    preferences.pauseUntil = nil
+    preferences.resume()
   }
 
   @objc private func pauseFor(_ sender: NSMenuItem) {
-    preferences.pauseUntil = Date.now.addingTimeInterval(Double(sender.tag) * 60)
-    // Update the icon when the pause ends.
-    DispatchQueue.main.asyncAfter(deadline: .now() + Double(sender.tag) * 60 + 1) { [weak self] in
+    let seconds = Double(sender.tag) * 60
+    preferences.pause(until: Date.now.addingTimeInterval(seconds))
+    // Update the icon when the pause ends. The wall clock, not the uptime clock:
+    // capture resumes by the wall clock, and the uptime clock stops while the Mac sleeps.
+    DispatchQueue.main.asyncAfter(wallDeadline: .now() + seconds + 1) { [weak self] in
       self?.preferences.refreshPauseState()
     }
   }
 
   @objc private func pauseIndefinitely() {
-    preferences.ignoreEvents = true
+    preferences.pause()
   }
 
   @objc private func skipNext() {
-    preferences.ignoreEvents = true
-    preferences.ignoreOnlyNextEvent = true
+    preferences.skipNextCopy()
   }
 }

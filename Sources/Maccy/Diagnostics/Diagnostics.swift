@@ -156,6 +156,14 @@ final class SelfTest {
     check(await count(store) == beforeSecret, "'skip next copy' skips one copy")
     await copy(to: pasteboard, controller: controller) { $0.setString("after the skip", forType: .string) }
     check(await count(store) == beforeSecret + 1, "capture resumes after the skipped copy")
+    // Skip, resume, then pause: a left-over skip flag made this pause skip one copy only.
+    preferences.skipNextCopy()
+    preferences.resume()
+    preferences.pause()
+    await copy(to: pasteboard, controller: controller, expectCapture: false) { $0.setString("paused one", forType: .string) }
+    await copy(to: pasteboard, controller: controller, expectCapture: false) { $0.setString("paused two", forType: .string) }
+    check(await count(store) == beforeSecret + 1, "a pause after skip and resume stays paused")
+    preferences.resume()
 
     // 10. Write-back: Maccy's own write is not captured again, and the item moves to the top.
     let textID = (try? await store.search(SearchQuery.parse("hello self-test"), limit: 1).hits.first?.id) ?? -1

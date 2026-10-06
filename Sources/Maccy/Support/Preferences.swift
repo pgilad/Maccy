@@ -267,6 +267,44 @@ final class Preferences {
     ignoreEvents || (pauseUntil.map { $0 > .now } ?? false)
   }
 
+  // All pause and resume paths use these methods. Each one sets all three keys, so a
+  // "skip next copy" flag that is left over cannot turn a later pause into one skip.
+  // The capture queue reads the keys at any time, so the order of the writes matters.
+
+  /// Pauses capture until `resume()`, or until `date`.
+  func pause(until date: Date? = nil) {
+    ignoreOnlyNextEvent = false
+    if let date {
+      ignoreEvents = false
+      pauseUntil = date
+    } else {
+      pauseUntil = nil
+      ignoreEvents = true
+    }
+  }
+
+  /// Skips the next copy only. The capture queue clears both keys at that copy.
+  func skipNextCopy() {
+    pauseUntil = nil
+    ignoreOnlyNextEvent = true
+    ignoreEvents = true
+  }
+
+  func resume() {
+    ignoreEvents = false
+    ignoreOnlyNextEvent = false
+    pauseUntil = nil
+  }
+
+  func togglePause() {
+    refreshPauseState()
+    if isPaused {
+      resume()
+    } else {
+      pause()
+    }
+  }
+
   /// Reads the pause keys again. A shell script or the capture queue can change them.
   func refreshPauseState() {
     let events = defaults.bool(forKey: Key.ignoreEvents)

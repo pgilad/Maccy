@@ -419,7 +419,10 @@ struct AdvancedSettings: View {
   var body: some View {
     Form {
       Section {
-        Toggle("Pause capture", isOn: $preferences.ignoreEvents)
+        Toggle("Pause capture", isOn: Binding(
+          get: { preferences.isPaused },
+          set: { $0 ? preferences.pause() : preferences.resume() }
+        ))
       } footer: {
         VStack(alignment: .leading, spacing: 6) {
           Text("⌥-click the menu bar icon to pause or resume. ⇧⌥-click skips only the next copy. A script can do the same:")

@@ -105,12 +105,6 @@ extension PanelModel {
   }
 
   func togglePause() {
-    preferences.refreshPauseState()
-    if preferences.isPaused {
-      preferences.ignoreEvents = false
-      preferences.pauseUntil = nil
-    } else {
-      preferences.ignoreEvents = true
-    }
+    preferences.togglePause()
   }
 }
