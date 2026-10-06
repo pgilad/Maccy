@@ -65,6 +65,9 @@ final class PanelModel {
   @ObservationIgnored private var detailTask: Task<Void, Never>?
   @ObservationIgnored private var imageTask: Task<Void, Never>?
   @ObservationIgnored private var thumbnailRequests: Set<Int64> = []
+  /// A delivery reads the store before it closes the panel. A second ↩ in that time
+  /// must not paste the item two times.
+  @ObservationIgnored private var isDelivering = false
 
   init(controller: HistoryController) {
     self.controller = controller
@@ -273,8 +276,20 @@ final class PanelModel {
     return selectedID
   }
 
-  func performPrimary() {
+  /// Runs one delivery at a time. A key press during a delivery does nothing.
+  private func deliverOnce(_ body: @escaping () async -> Void) {
+    guard !isDelivering else {
+      return
+    }
+    isDelivering = true
     Task {
+      await body()
+      isDelivering = false
+    }
+  }
+
+  func performPrimary() {
+    deliverOnce { [self] in
       guard let id = await settledSelection() else {
         // No result: copy the search text itself, like upstream Maccy.
         if !query.isEmpty {
@@ -287,7 +302,7 @@ final class PanelModel {
   }
 
   func performSecondary() {
-    Task {
+    deliverOnce { [self] in
       guard let id = await settledSelection() else {
         return
       }
@@ -296,7 +311,7 @@ final class PanelModel {
   }
 
   func pastePlainText() {
-    Task {
+    deliverOnce { [self] in
       guard let id = await settledSelection() else {
         return
       }
@@ -305,7 +320,7 @@ final class PanelModel {
   }
 
   func performPrimary(atRow index: Int) {
-    Task {
+    deliverOnce { [self] in
       _ = await settledSelection()
       guard rows.indices.contains(index) else {
         return

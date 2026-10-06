@@ -29,6 +29,8 @@ final class HistoryController {
 
   /// Called after an action that must close the panel (paste, copy).
   @ObservationIgnored var closePanel: () -> Void = {}
+  /// The system Accessibility prompt shows once per launch, not at each ↩.
+  @ObservationIgnored private var didRequestAccess = false
 
   init(
     preferences: Preferences,
@@ -196,15 +198,16 @@ final class HistoryController {
         return
       }
       writer.write(representations, plainText: detailText, plainTextOnly: plainTextOnly)
-      try await store.touch(id: id)
-      revision += 1
-      await refreshLatestTitle()
     } catch {
       Log.history.error("Cannot deliver an item: \(String(describing: error), privacy: .public)")
       toast = "Cannot read the item."
       return
     }
+    // Close and paste first. Moving the item to the top can wait.
     finish(delivery)
+    try? await store.touch(id: id)
+    revision += 1
+    await refreshLatestTitle()
   }
 
   /// Pastes or copies text that is not in the history (edited text, a search string).
@@ -214,14 +217,19 @@ final class HistoryController {
   }
 
   private func finish(_ delivery: Delivery) {
-    closePanel()
-    guard delivery == .paste else {
+    if delivery == .paste && !Paster.isTrusted {
+      // The copy succeeded, but the paste needs Accessibility. Keep the panel open, so
+      // the message shows: after the close, the next open clears it. The first time,
+      // the system prompt explains the problem (it takes the focus and closes the panel).
+      toast = "Copied. Allow Accessibility access to paste automatically."
+      if !didRequestAccess {
+        didRequestAccess = true
+        Paster.requestAccess()
+      }
       return
     }
-    guard Paster.isTrusted else {
-      // Without Accessibility, the copy still succeeded. Ask for the permission once.
-      Paster.requestAccess()
-      toast = "Copied. Allow Accessibility access to paste automatically."
+    closePanel()
+    guard delivery == .paste else {
       return
     }
     // Let the target app become key again before the keystroke arrives.
@@ -267,6 +275,7 @@ final class HistoryController {
 
   func saveImage(_ id: Int64) async {
     guard let data = try? await store.imageData(id: id) else {
+      toast = "Cannot read the image."
       return
     }
     let type = UTType(filenameExtension: "png") ?? .png
@@ -284,7 +293,11 @@ final class HistoryController {
     do {
       try png.write(to: url, options: .atomic)
     } catch {
-      toast = "Cannot save the image."
+      // The save panel took the focus, so the clipboard panel is closed. A message in
+      // its footer would not show. Use an alert.
+      NSApp.activate()
+      NSAlert(error: error).runModal()
+      NSApp.returnFocusIfIdle()
     }
   }
 
