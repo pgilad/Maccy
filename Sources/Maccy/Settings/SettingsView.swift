@@ -206,9 +206,17 @@ struct HistorySettings: View {
       }
     }
     .formStyle(.grouped)
-    .task { await refreshStats() }
-    .onChange(of: controller.revision) {
-      Task { await refreshStats() }
+    // The disk size reads every file in the data folder, on the store actor. Each copy,
+    // OCR result and paste changes the revision, so wait until the changes stop for 2 s:
+    // a new value cancels the wait. The first time, read the stats at once.
+    .task(id: controller.revision) {
+      if stats != nil {
+        try? await Task.sleep(for: .seconds(2))
+        guard !Task.isCancelled else {
+          return
+        }
+      }
+      await refreshStats()
     }
     .confirmationDialog("Delete all unpinned items?", isPresented: $confirmClear) {
       Button("Delete", role: .destructive) {
