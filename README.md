@@ -97,11 +97,13 @@ make run            # debug build with a throwaway data folder
 make readme-images  # render the screenshots above from the app's own views
 ```
 
-To release, set the new version in `VERSION`, commit, and push a matching tag. The release workflow tests, builds and signs the app, then publishes the zip with build provenance.
+To release, set the new version in `VERSION`, commit, and push a matching tag. The release workflow tests, builds and signs the app, then publishes the zip with build provenance. The release notes list the commits since the previous tag, without the `Release` commits.
 
 ```fish
-git tag -a v3.0.1 -m "Maccy 3.0.1"
-git push origin v3.0.1
+echo 3.0.2 > VERSION
+git commit -am "Release 3.0.2"
+git tag -a v3.0.2 -m "Maccy 3.0.2"
+git push origin main v3.0.2
 ```
 
 ## License

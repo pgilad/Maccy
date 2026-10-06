@@ -78,7 +78,8 @@ jobs:
             if [ -n "$PREVIOUS" ]; then
               echo "## Changes since $PREVIOUS"
               echo
-              git log --no-merges --format='- %s' "$PREVIOUS..$GITHUB_REF_NAME"
+              # Without the "Release x.y.z" commits that only change VERSION.
+              git log --no-merges --invert-grep --grep='^Release [0-9]' --format='- %s' "$PREVIOUS..$GITHUB_REF_NAME"
               echo
             fi
             sed "s/__VERSION__/$VERSION/g" .github/release-notes.md
