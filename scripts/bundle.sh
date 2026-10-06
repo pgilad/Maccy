@@ -5,6 +5,7 @@
 #   MACCY_SIGN_IDENTITY  Code signing identity. Default: "Maccy Local Signing" if it is
 #                        valid, else ad-hoc ("-"). See scripts/create-signing-identity.sh.
 #   APP_DIR              Output path. Default: build/Maccy.app
+#   SWIFT_FLAGS          Extra flags for swift build, for example -Xswiftc -warnings-as-errors
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -19,7 +20,9 @@ if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
 fi
 
 echo "==> Building Maccy $VERSION ($BUILD, $COMMIT)"
-swift build --configuration release --arch arm64 --product Maccy
+# SWIFT_FLAGS holds several words, so it is not quoted.
+# shellcheck disable=SC2086
+swift build --configuration release --arch arm64 --product Maccy ${SWIFT_FLAGS:-}
 BIN_DIR=$(swift build --configuration release --arch arm64 --show-bin-path)
 
 echo "==> Assembling $APP_DIR"

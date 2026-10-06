@@ -12,6 +12,11 @@ jobs:
   build:
     runs-on: macos-26
     timeout-minutes: 30
+    env:
+      # A fixed Xcode, so a runner image update cannot change the compiler.
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      # The build has no compiler warnings. Keep it that way.
+      SWIFT_FLAGS: -Xswiftc -warnings-as-errors
     steps:
       # Pinned to a commit, not a movable tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
