@@ -45,6 +45,7 @@ public enum ClipAnalyzer {
       .compactMap { URL(dataRepresentation: $0.data, relativeTo: nil, isAbsolute: true) }
 
     // Keep one image representation. Convert TIFF (large and uncompressed) to PNG.
+    // A TIFF with too many pixels to decode safely stays a TIFF.
     var primaryImage: Data?
     if let image = PasteboardTypes.images.lazy.compactMap({ type in
       representations.first { $0.type == type }

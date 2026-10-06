@@ -276,11 +276,21 @@ final class HistoryController {
     guard response == .OK, let url = panel.url else {
       return
     }
-    let png = ImageProcessing.pngData(from: data) ?? data
+    let png = await Self.pngForSaving(data)
     do {
       try png.write(to: url, options: .atomic)
     } catch {
       toast = "Cannot save the image."
     }
+  }
+
+  /// A stored PNG is written as it is. Another format needs a full decode, so the
+  /// conversion runs off the main thread, with no pixel limit: the user asked for it.
+  @concurrent
+  nonisolated private static func pngForSaving(_ data: Data) async -> Data {
+    if ImageProcessing.typeIdentifier(of: data) == PasteboardTypes.png {
+      return data
+    }
+    return ImageProcessing.pngData(from: data, maxPixelCount: .max) ?? data
   }
 }

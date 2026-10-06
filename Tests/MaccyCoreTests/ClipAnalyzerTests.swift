@@ -83,6 +83,15 @@ import Testing
     #expect(tiffOnly.imageWidth == 40)
   }
 
+  @Test func pngConversionSkipsImagesWithTooManyPixels() throws {
+    let tiff = makeImage(width: 40, height: 20, type: .tiff)
+    #expect(ImageProcessing.typeIdentifier(of: tiff) == PasteboardTypes.tiff)
+    #expect(ImageProcessing.pngData(from: tiff, maxPixelCount: 800) != nil)
+    #expect(ImageProcessing.pngData(from: tiff, maxPixelCount: 799) == nil)
+    let png = try #require(ImageProcessing.pngData(from: tiff))
+    #expect(ImageProcessing.typeIdentifier(of: png) == PasteboardTypes.png)
+  }
+
   @Test func imageWithRealTextIsText() throws {
     let clip = try #require(ClipAnalyzer.analyze(CapturedClip(representations: [
       Representation(type: PasteboardTypes.string, data: Data("A paragraph with a picture".utf8)),
