@@ -362,6 +362,10 @@ struct PrivacySettings: View {
         }
       } header: {
         Text("Ignore copies that match")
+      } footer: {
+        Text("Maccy does not save a copy when the patterns cannot check it in 0.25 seconds, for example a slow pattern on a large copy.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
       }
     }
     .formStyle(.grouped)

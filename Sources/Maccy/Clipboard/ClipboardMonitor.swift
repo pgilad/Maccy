@@ -177,10 +177,17 @@ nonisolated final class ClipboardMonitor: Sendable {
       return nil
     }
 
-    if !rules.ignorePatterns.isEmpty,
-       let text = ClipAnalyzer.plainText(in: representations),
-       rules.ignorePatterns.matches(text) {
-      return nil
+    if !rules.ignorePatterns.isEmpty, let text = ClipAnalyzer.plainText(in: representations) {
+      switch rules.ignorePatterns.evaluate(text) {
+      case .match:
+        return nil
+      case .timedOut:
+        // The patterns are a privacy rule. A copy that they cannot check is not saved.
+        Log.capture.info("Skipped a copy: the ignore patterns did not finish in time")
+        return nil
+      case .noMatch:
+        break
+      }
     }
 
     return CapturedClip(

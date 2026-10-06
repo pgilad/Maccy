@@ -190,8 +190,18 @@ import Testing
   @Test func invalidIgnorePatternDoesNotStopOthers() {
     let patterns = IgnorePatterns(["([unclosed", "^secret"])
     #expect(patterns.invalidPatterns == ["([unclosed"])
-    #expect(patterns.matches("secret value"))
-    #expect(!patterns.matches("public value"))
+    #expect(patterns.evaluate("secret value") == .match)
+    #expect(patterns.evaluate("public value") == .noMatch)
+  }
+
+  @Test func slowIgnorePatternStopsAtTheTimeLimit() {
+    // `.*password` with no match takes quadratic time: minutes on 200,000 characters.
+    let patterns = IgnorePatterns([".*password"])
+    let text = String(repeating: "a", count: 200_000)
+    let start = ContinuousClock.now
+    #expect(patterns.evaluate(text, timeLimit: .milliseconds(50)) == .timedOut)
+    #expect(ContinuousClock.now - start < .seconds(2))
+    #expect(patterns.evaluate("my password", timeLimit: .milliseconds(50)) == .match)
   }
 }
 

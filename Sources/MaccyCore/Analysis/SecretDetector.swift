@@ -41,6 +41,18 @@ public enum SecretDetector {
 /// User regular expressions for the "ignore copies that match" rule.
 /// The patterns compile once, when the setting changes.
 public struct IgnorePatterns: Sendable {
+  public enum Verdict: Sendable, Equatable {
+    case match
+    case noMatch
+    /// A pattern did not finish in the time limit (for example `.*password` on a
+    /// large copy, which takes quadratic time). The copy is not checked.
+    case timedOut
+  }
+
+  /// The time for all patterns together, for one copy. The check runs on the
+  /// capture queue, so a slow pattern must not delay the copies after it.
+  public static let timeLimit: Duration = .milliseconds(250)
+
   private let regexes: [NSRegularExpression]
   public let invalidPatterns: [String]
 
@@ -61,8 +73,30 @@ public struct IgnorePatterns: Sendable {
   public var isEmpty: Bool { regexes.isEmpty }
 
   /// An invalid pattern does not stop the check of the other patterns.
-  public func matches(_ text: String) -> Bool {
+  public func evaluate(_ text: String, timeLimit: Duration = Self.timeLimit) -> Verdict {
     let range = NSRange(text.startIndex..., in: text)
-    return regexes.contains { $0.firstMatch(in: text, range: range) != nil }
+    let deadline = ContinuousClock.now + timeLimit
+    for regex in regexes {
+      var found = false
+      var timedOut = false
+      // `.reportProgress` calls the block during a long match, so the deadline also
+      // stops a pattern that backtracks.
+      regex.enumerateMatches(in: text, options: [.reportProgress], range: range) { match, _, stop in
+        if match != nil {
+          found = true
+          stop.pointee = true
+        } else if ContinuousClock.now >= deadline {
+          timedOut = true
+          stop.pointee = true
+        }
+      }
+      if found {
+        return .match
+      }
+      if timedOut {
+        return .timedOut
+      }
+    }
+    return .noMatch
   }
 }
