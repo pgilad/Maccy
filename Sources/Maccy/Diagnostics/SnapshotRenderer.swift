@@ -46,6 +46,16 @@ enum SnapshotRenderer {
     ok = save(panel(model), size: preferences.windowSize, to: directory.appending(path: "panel-shortcuts.png")) && ok
     model.isCommandHeld = false
 
+    // The README image: a search, with the code item selected, so the preview has content.
+    if let code = model.rows.first(where: { $0.summary.title.hasPrefix("func deploy") }) {
+      model.selectedID = code.id
+      await settle(model)
+    }
+    for scheme in [ColorScheme.light, .dark] {
+      let name = scheme == .dark ? "readme-dark.png" : "readme-light.png"
+      ok = saveShowcase(model, size: preferences.windowSize, scheme: scheme, to: directory.appending(path: name)) && ok
+    }
+
     model.query = "zzzz nothing matches"
     await settle(model)
     ok = save(panel(model), size: preferences.windowSize, to: directory.appending(path: "panel-empty.png")) && ok
@@ -66,6 +76,36 @@ enum SnapshotRenderer {
       ClipboardView(model: model)
         .padding(1)
     }
+  }
+
+  /// The README image: the panel with a frame and a shadow, on a transparent background,
+  /// so it suits the light and the dark GitHub page. Glass does not render offscreen,
+  /// so an opaque fill stands in for it.
+  private static func saveShowcase(_ model: PanelModel, size: CGSize, scheme: ColorScheme, to url: URL) -> Bool {
+    let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+    let content = ClipboardView(model: model)
+      .frame(width: size.width, height: size.height)
+      .background {
+        // On the frame only: a shadow on the whole view also falls on each row.
+        shape
+          .fill(scheme == .dark ? Color(white: 0.14) : Color(white: 0.97))
+          .shadow(color: .black.opacity(scheme == .dark ? 0.5 : 0.22), radius: 24, y: 10)
+      }
+      .overlay {
+        shape.strokeBorder(scheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.1), lineWidth: 1)
+      }
+      .padding(40)
+      .environment(\.colorScheme, scheme)
+      .environment(\.isSnapshot, true)
+    let renderer = ImageRenderer(content: content)
+    renderer.scale = 2
+    guard let image = renderer.cgImage,
+          let data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]),
+          (try? data.write(to: url)) != nil else {
+      print("FAIL \(url.lastPathComponent)")
+      return false
+    }
+    return true
   }
 
   private static func settle(_ model: PanelModel) async {
@@ -149,7 +189,7 @@ enum SnapshotRenderer {
           let release = try await registry.latest(for: service)
           try await cluster.rollOut(release, strategy: .canary(percent: 10))
         }
-        """, app: "Xcode", bundleID: "com.apple.dt.Xcode", minutesAgo: 120),
+        """, app: "Safari", bundleID: "com.apple.Safari", minutesAgo: 120),
       CapturedClip(
         representations: [
           Representation(

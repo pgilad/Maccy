@@ -13,7 +13,7 @@ TEST_FLAGS := $(if $(wildcard $(TESTING_PLUGINS)),-Xswiftc -plugin-path -Xswiftc
 # SwiftLint needs SourceKit. Without Xcode, it must look in the Command Line Tools.
 LINT_ENV := $(if $(findstring CommandLineTools,$(shell xcode-select -p)),TOOLCHAIN_DIR=$(shell xcode-select -p),)
 
-.PHONY: build app install test perf lint self-test snapshots run clean signing-identity
+.PHONY: build app install test perf lint self-test snapshots readme-images run clean signing-identity
 
 build: ## Debug build
 	$(SWIFT) build $(SWIFT_FLAGS)
@@ -41,6 +41,11 @@ self-test: build ## Capture, store, search and write-back on a private pasteboar
 
 snapshots: build ## Render the panel to PNG files in build/snapshots
 	.build/debug/Maccy --render-snapshots build/snapshots
+
+readme-images: snapshots ## Update the README screenshots in docs/images
+	mkdir -p docs/images
+	cp build/snapshots/readme-light.png docs/images/panel-light.png
+	cp build/snapshots/readme-dark.png docs/images/panel-dark.png
 
 run: build ## Run the debug build with a throwaway data folder
 	MACCY_DATA_DIR=$$(mktemp -d) .build/debug/Maccy

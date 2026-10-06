@@ -1,115 +1,90 @@
-# Maccy (pgilad fork)
+<p align="center">
+  <img src="Resources/AppIcon.iconset/icon_128x128@2x.png" width="128" height="128" alt="Maccy app icon">
+</p>
 
-A fast, private clipboard manager for macOS 26 and later, built from source. It started as a fork of [p0deje/Maccy](https://github.com/p0deje/Maccy) and is now a rewrite with a Raycast-style panel, long history, full-text search, and no third-party code.
+<h1 align="center">Maccy</h1>
 
-## Why this fork
+<p align="center">A fast, private clipboard manager for macOS. Built from source.</p>
 
-- **Build from source, trust the source.** No third-party Swift packages, no auto-updater, no network access. The app links only Apple system frameworks. Updates are `git pull` and `make install`.
-- **No Xcode needed.** It builds with the Command Line Tools (`xcode-select --install`).
-- **Long history that stays fast.** SQLite with an FTS5 trigram index. Search over 100,000 items takes under 1 ms for selective queries, about 0.1 s for a typical term, and about 0.12 s in the worst case: a full scan for a rare one- or two-letter term or a regex (`make perf`).
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#keyboard">Keyboard</a> ·
+  <a href="#privacy">Privacy</a>
+</p>
 
-## Features
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/panel-dark.png">
+    <img src="docs/images/panel-light.png" width="800" alt="The Maccy panel. A search for “deploy” highlights four items, and the preview shows the selected code snippet.">
+  </picture>
+</p>
 
-- Two-pane panel: results on the left, a full preview on the right (text, images, colors, links, files) with metadata: source app, size, dimensions, character/word/line count, copy times.
-- Text, rich text, links, colors, images and files. Duplicates merge and move to the top.
-- Search everywhere in the item, not only in the first line. Case- and diacritic-insensitive, ranked by match position, recency and frequency, with a fuzzy fallback.
-- Text in images is searchable (on-device OCR with Vision).
-- Type filter (⌘P) and search syntax: `type:image`, `app:slack` (or `app:"Google Chrome"`), `is:pinned`, `"exact phrase"`, `/regex/`. Filters combine with a regex: `type:text /order \d+/`.
-- Actions menu (⌘K, or right-click an item; a native macOS menu): paste, copy, paste as plain text, edit and paste, open link, show in Finder, save image, copy text in image, pin, delete.
-- Pins stay at the top and are never deleted by retention.
-- Retention by age (1 day to forever), item count, and total size.
-- Pause capture from the menu bar (⌥-click, or right-click for timed pauses), or from a script: `defaults write com.pgilad.Maccy ignoreEvents true`.
-
-## Privacy and security
-
-- Copies that password managers mark as concealed or transient ([nspasteboard.org](http://nspasteboard.org)) are never read.
-- Password managers are ignored by default (1Password, Apple Passwords, Keychain Access, Bitwarden, KeePassXC, Dashlane).
-- Copies that look like credentials (AWS, GitHub, GitLab, Slack, Stripe, Google, OpenAI, Anthropic, npm and Azure keys and tokens, JWTs, private keys including PGP) are deleted after 15 minutes by default, or not saved at all.
-- The App Sandbox is on. The history lives in the app container, where macOS asks for consent before another app reads it. The data folder is excluded from Time Machine.
-- SQLite runs with `secure_delete`, so deleted items are overwritten in the database file.
-- A damaged database moves aside for recovery, and Maccy deletes it after 7 days.
-- No clipboard content in logs or notifications.
+Maccy keeps everything you copy and brings it back in a few keystrokes. This fork of [p0deje/Maccy](https://github.com/p0deje/Maccy) is a rewrite with a two-pane panel, full-text search over a long history, and no third-party code.
 
 ## Install
 
-Requirements: macOS 26 or later on Apple silicon, and the Command Line Tools.
+Requires macOS 26 or later on Apple silicon, and the Command Line Tools (`xcode-select --install`). Xcode is not needed.
 
 ```fish
-xcode-select --install          # once, if the tools are missing
 git clone https://github.com/pgilad/Maccy.git
 cd Maccy
-make signing-identity           # once per Mac, asks for your login password
-make install                    # builds, signs, copies to /Applications, starts
+make signing-identity   # once per Mac
+make install            # build, sign, copy to /Applications and start
 ```
 
-On first start, Maccy opens Settings. Grant **Accessibility** (needed to paste into other apps). If macOS asks about pasteboard access, choose to always allow Maccy.
+On first start, grant **Accessibility** so Maccy can paste into other apps. `make signing-identity` creates a local code-signing certificate, so macOS keeps that permission after each rebuild.
 
-`make signing-identity` creates a self-signed certificate, "Maccy Local Signing", in your login keychain. macOS ties the Accessibility permission to the code signature. Without a stable certificate, the build is signed ad-hoc, and you must grant Accessibility again after each rebuild.
+To update, run `git pull` and `make install`.
 
-To update:
+## Features
 
-```fish
-git pull
-make install
-```
+- Search everything you copy: text, rich text, links, colors, images and files. Search reads the whole item, ignores case and accents, and ranks the results.
+- Find text in screenshots with on-device OCR.
+- Preview the full item with its source app, size and copy times.
+- Filter with <kbd>⌘P</kbd>, or type `type:image`, `app:slack`, `is:pinned`, `"exact phrase"` or `/regex/`.
+- Press <kbd>⌘K</kbd> for every action: paste as plain text, edit, open, show in Finder, save image, pin or delete.
+- Pin items to keep them on top and safe from cleanup.
+- Keep history by age, item count or total size. Search stays fast with 100,000 items.
+- Pause capture from the menu bar icon.
 
 ## Keyboard
 
 | Key | Action |
 | --- | --- |
-| ⇧⌘C | Open the panel (change it in Settings) |
-| Hold the modifiers, press C again | Select the next item; release to paste it |
-| ↑ ↓, ⌃N ⌃P, ⌃J ⌃K | Move the selection |
-| ↩ | Paste into the active app (or copy, see Settings) |
-| ⌘↩ | Copy (or paste) |
-| ⌥↩ | Paste as plain text |
-| ⌘1 – ⌘9 | Paste one of the first nine items |
-| ⌘K | Actions menu |
-| ⌘, | Settings |
-| ⌘P | Next type filter |
-| ⇧⌘P | Pin or unpin |
-| ⌘E | Edit, then paste |
-| ⌘⌫ | Delete the item (when the search field is empty; while you search, use ⌘K › Delete) |
-| ⇧⌘⌫ | Delete all unpinned items |
-| ⎋ | Clear the search, then close |
-| ⌘W | Close the panel |
+| <kbd>⇧⌘C</kbd> | Open Maccy (change it in Settings) |
+| <kbd>C</kbd> again, modifiers held | Select the next item, release to paste it |
+| <kbd>↑</kbd> <kbd>↓</kbd> | Move the selection |
+| <kbd>↩</kbd> | Paste into the active app |
+| <kbd>⌘↩</kbd> | Copy only |
+| <kbd>⌥↩</kbd> | Paste as plain text |
+| <kbd>⌘1</kbd> – <kbd>⌘9</kbd> | Paste one of the first nine items |
+| <kbd>⌘K</kbd> | All actions, with their shortcuts |
+| <kbd>⎋</kbd> | Clear the search, then close |
 
-If the shortcut does not work in password fields, see [docs/keyboard-shortcut-password-fields.md](docs/keyboard-shortcut-password-fields.md).
+Settings can swap <kbd>↩</kbd> and <kbd>⌘↩</kbd>. If the shortcut does not work in a password field, see [this note](docs/keyboard-shortcut-password-fields.md).
 
-## Removed from upstream Maccy
+## Privacy
 
-- Sparkle auto-update, the appcast and App Store review prompts.
-- Copy notifications and sounds (they put clipboard text into Notification Center).
-- App Intents for Shortcuts: their metadata step needs Xcode, and this build does not.
-- The 40 translations: the UI is English only.
-- The paste stack, which upstream shipped turned off.
-- All third-party Swift packages (Sparkle, Defaults, KeyboardShortcuts, Sauce, Settings, LaunchAtLogin, fuse-swift, SwiftHEXColors, swift-log, and swift-syntax through Defaults).
+- No network access, no telemetry and no auto-updater. The app links only Apple frameworks.
+- Copies that password managers mark as concealed are never read, and password managers are ignored by default.
+- Copies that look like API keys, tokens or private keys are deleted after 15 minutes, or not saved at all.
+- Nothing you copy goes to logs or notifications.
+- The App Sandbox is on. History stays in the app container and out of Time Machine, and deleted items are overwritten in the database.
 
-The new bundle ID is `com.pgilad.Maccy`, so this app does not share data or permissions with an installed upstream Maccy.
+## About this fork
+
+This fork started from [Maccy](https://github.com/p0deje/Maccy) by Alexey Rodionov and is now a rewrite on SQLite with a full-text index. It drops Sparkle auto-update, App Store prompts, copy notifications, App Intents, translations and all third-party Swift packages. Its bundle ID is `com.pgilad.Maccy`, so it does not share data or permissions with upstream Maccy.
 
 ## Development
 
 ```fish
-make build        # debug build
-make test         # unit tests for MaccyCore (Swift Testing)
-make self-test    # capture, store, search and paste-back on a private pasteboard
-make snapshots    # render the panel to build/snapshots/*.png
-make perf         # search timings on 100,000 generated items, with time limits
-make lint         # SwiftLint, warnings fail (brew install swiftlint)
-make run          # run the debug build with a throwaway data folder
-make app          # release build in build/Maccy.app
+make test           # unit tests
+make self-test      # capture, search and paste on a private pasteboard
+make lint           # SwiftLint (brew install swiftlint)
+make run            # debug build with a throwaway data folder
+make readme-images  # render the screenshots above from the app's own views
 ```
-
-Layout:
-
-- `Sources/MaccyCore`: storage (SQLite, FTS5, blob files), analysis (kind, title, hash, secrets, images), search and ranking, retention. No UI.
-- `Sources/Maccy`: the app. Pasteboard monitor, paste, global shortcut (Carbon), panel and settings (SwiftUI), menu bar item.
-- `Tests/MaccyCoreTests`: unit tests.
-- `Resources`: Info.plist, entitlements, icons. `scripts/bundle.sh` assembles and signs the app.
-
-`self-test` and `snapshots` exist only in debug builds. They never touch the real clipboard or your history.
-
-CI runs `make lint`, `make test`, `make self-test` and `make app` on each push, with a fixed Xcode and with compiler warnings as errors (`SWIFT_FLAGS=-Xswiftc -warnings-as-errors`). Dependabot keeps the commit-pinned actions up to date.
 
 ## License
 
