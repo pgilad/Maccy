@@ -41,6 +41,8 @@ import Testing
     #expect(ParsedColor.parse("#ff990080")?.hex == "#FF990080")
     #expect(ParsedColor.parse("#ggg") == nil)
     #expect(ParsedColor.parse("rgb(300, 0, 0)") == nil)
+    #expect(ParsedColor.parse("rgbx(1, 2, 3)") == nil)
+    #expect(ParsedColor.parse("rgba(1, 2, 3, 0.5)")?.alpha == 0.5)
   }
 
   @Test func htmlOnlyIsConvertedWithoutWebKit() throws {
@@ -250,5 +252,34 @@ import Testing
 
   @Test func entities() {
     #expect(TextUtilities.decodeEntities("a &lt;b&gt; &#65;&#x42; &unknown; &") == "a <b> AB &unknown; &")
+  }
+
+  @Test func titleNeverEndsWithASpace() {
+    let text = String(repeating: "a", count: 299) + " b"
+    let title = TextUtilities.title(from: text)
+    #expect(title.count == 299)
+    #expect(title.last == "a")
+  }
+
+  @Test func htmlElementsAreRemoved() {
+    let html = "<SCRIPT type=x>alert(1)</script><styles>kept</styles> a  \n<b>b</b><style>p{}</style>"
+    #expect(TextUtilities.plainText(fromHTML: html) == "kept a\nb")
+    // An unclosed element keeps its text, as before.
+    #expect(TextUtilities.plainText(fromHTML: "<script>never closed <p>text</p>") == "never closed text")
+  }
+
+  @Test func malformedHTMLTakesLinearTime() {
+    // Each input took seconds (the spaces 30 s) with the old regular expressions.
+    let inputs = [
+      "<p>x</p>" + String(repeating: "a < b ", count: 10_000),
+      "<p>x</p>" + String(repeating: " ", count: 60_000) + "y",
+      String(repeating: "<script>", count: 10_000),
+    ]
+    let start = ContinuousClock.now
+    for html in inputs {
+      _ = TextUtilities.plainText(fromHTML: html)
+    }
+    #expect(ContinuousClock.now - start < .seconds(1))
+    #expect(TextUtilities.plainText(fromHTML: inputs[0]).hasSuffix("a < b"))
   }
 }

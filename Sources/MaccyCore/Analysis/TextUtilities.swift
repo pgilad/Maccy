@@ -27,6 +27,10 @@ public enum TextUtilities {
         continue
       }
       if pendingSpace {
+        // Stop before a space that no character can follow.
+        guard count + 1 < maxLength else {
+          break
+        }
         output.append(" ")
         count += 1
         pendingSpace = false
@@ -42,21 +46,61 @@ public enum TextUtilities {
 
   /// Plain text from HTML without WebKit. `NSAttributedString(html:)` needs the main
   /// thread and is slow, so the capture pipeline uses this simple converter.
+  /// All steps take linear time: copied HTML can be large and malformed.
   public static func plainText(fromHTML html: String) -> String {
-    var text = html
+    var text = removingElements(["script", "style", "head"], from: html)
     let replacements: [(String, String)] = [
-      ("(?is)<(script|style|head)[^>]*>.*?</\\1>", ""),
       ("(?i)<br\\s*/?>", "\n"),
       ("(?i)</(p|div|li|tr|h[1-6]|blockquote|pre)>", "\n"),
-      ("(?s)<[^>]+>", ""),
+      // `[^<>]`, not `[^>]`: with `[^>]`, each bare `<` in the text scans to the end.
+      ("<[^<>]+>", ""),
     ]
     for (pattern, template) in replacements {
       text = text.replacingOccurrences(of: pattern, with: template, options: .regularExpression)
     }
+    // Per line, not with `[ \\t]+\n`: that pattern backtracks over a long run of spaces.
     return decodeEntities(text)
-      .replacingOccurrences(of: "[ \\t]+\n", with: "\n", options: .regularExpression)
+      .split(separator: "\n", omittingEmptySubsequences: false)
+      .map(trimmingTrailingBlanks)
+      .joined(separator: "\n")
       .replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
       .trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  /// Removes the elements with their content. A loop, not `<script.*?</script>`:
+  /// the lazy pattern scans to the end for each unclosed tag.
+  static func removingElements(_ names: [String], from html: String) -> String {
+    var text = html
+    for name in names {
+      var output = ""
+      var rest = text[...]
+      while let open = rest.range(of: "<\(name)", options: .caseInsensitive) {
+        // The name must end here: `<style>` or `<style media="…">`, not `<styles>`.
+        let endsName = rest[open.upperBound...].first.map { $0 == ">" || $0 == "/" || $0.isWhitespace } ?? true
+        guard endsName else {
+          output += rest[..<open.upperBound]
+          rest = rest[open.upperBound...]
+          continue
+        }
+        // With no closing tag after this one, no later tag has one either.
+        guard let close = rest[open.upperBound...].range(of: "</\(name)>", options: .caseInsensitive) else {
+          break
+        }
+        output += rest[..<open.lowerBound]
+        rest = rest[close.upperBound...]
+      }
+      output += rest
+      text = output
+    }
+    return text
+  }
+
+  private static func trimmingTrailingBlanks(_ line: Substring) -> Substring {
+    var line = line
+    while let last = line.last, last == " " || last == "\t" {
+      line = line.dropLast()
+    }
+    return line
   }
 
   private static let namedEntities: [String: String] = [

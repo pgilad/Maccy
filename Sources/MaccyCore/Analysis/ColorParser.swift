@@ -55,8 +55,8 @@ public struct ParsedColor: Sendable, Hashable {
 
   private static func parseRGB(_ text: String) -> ParsedColor? {
     let lowercased = text.lowercased()
-    guard lowercased.hasPrefix("rgb"), lowercased.hasSuffix(")"),
-          let open = lowercased.firstIndex(of: "(") else {
+    guard lowercased.hasSuffix(")"), let open = lowercased.firstIndex(of: "("),
+          ["rgb", "rgba"].contains(lowercased[..<open]) else {
       return nil
     }
     let inner = lowercased[lowercased.index(after: open)..<lowercased.index(before: lowercased.endIndex)]
