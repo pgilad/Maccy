@@ -66,4 +66,3 @@ public struct IgnorePatterns: Sendable {
     return regexes.contains { $0.firstMatch(in: text, range: range) != nil }
   }
 }
-

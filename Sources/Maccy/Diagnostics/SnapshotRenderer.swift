@@ -16,7 +16,9 @@ enum SnapshotRenderer {
     let preferences = Preferences(defaults: Diagnostics.isolatedDefaults("snapshots"))
     await seed(store)
 
-    let controller = HistoryController(preferences: preferences, store: store, pasteboard: NSPasteboard(name: .init("com.pgilad.Maccy.snapshots")))
+    let controller = HistoryController(
+      preferences: preferences, store: store, pasteboard: NSPasteboard(name: .init("com.pgilad.Maccy.snapshots"))
+    )
     let model = PanelModel(controller: controller)
     model.prepareForOpen(target: SourceApp(bundleID: "com.apple.dt.Xcode", name: "Xcode"))
     await settle(model)
@@ -131,10 +133,15 @@ enum SnapshotRenderer {
       if let html {
         representations.append(Representation(type: PasteboardTypes.html, data: Data(html.utf8)))
       }
-      return CapturedClip(representations: representations, sourceBundleID: bundleID, sourceAppName: app, capturedAt: now.addingTimeInterval(-minutesAgo * 60))
+      return CapturedClip(
+        representations: representations, sourceBundleID: bundleID, sourceAppName: app,
+        capturedAt: now.addingTimeInterval(-minutesAgo * 60)
+      )
     }
     let clips: [CapturedClip] = [
-      text("kubectl rollout restart deployment/api -n production", app: "Terminal", bundleID: "com.apple.Terminal", minutesAgo: 400),
+      text(
+        "kubectl rollout restart deployment/api -n production", app: "Terminal", bundleID: "com.apple.Terminal", minutesAgo: 400
+      ),
       text("#FF9F0A", app: "Figma", bundleID: "com.figma.Desktop", minutesAgo: 300),
       text("https://github.com/pgilad/Maccy/pull/12", app: "Safari", bundleID: "com.apple.Safari", minutesAgo: 200),
       text("""
@@ -145,15 +152,26 @@ enum SnapshotRenderer {
         """, app: "Xcode", bundleID: "com.apple.dt.Xcode", minutesAgo: 120),
       CapturedClip(
         representations: [
-          Representation(itemIndex: 0, type: PasteboardTypes.fileURL, data: URL(filePath: "/Users/me/Documents/Q3 Report.pdf").dataRepresentation),
-          Representation(itemIndex: 1, type: PasteboardTypes.fileURL, data: URL(filePath: "/Users/me/Documents/Budget.numbers").dataRepresentation),
+          Representation(
+            itemIndex: 0, type: PasteboardTypes.fileURL, data: URL(filePath: "/Users/me/Documents/Q3 Report.pdf").dataRepresentation
+          ),
+          Representation(
+            itemIndex: 1, type: PasteboardTypes.fileURL, data: URL(filePath: "/Users/me/Documents/Budget.numbers").dataRepresentation
+          ),
         ],
         sourceBundleID: "com.apple.finder", sourceAppName: "Finder", capturedAt: now.addingTimeInterval(-90 * 60)
       ),
-      text("Meeting notes: deploy the canary on Thursday, then watch the error budget.", app: "Notes", bundleID: "com.apple.Notes", minutesAgo: 45,
-           html: "<p>Meeting notes: <b>deploy</b> the canary on Thursday</p>"),
+      text(
+        "Meeting notes: deploy the canary on Thursday, then watch the error budget.", app: "Notes", bundleID: "com.apple.Notes",
+        minutesAgo: 45, html: "<p>Meeting notes: <b>deploy</b> the canary on Thursday</p>"
+      ),
       CapturedClip(
-        representations: [Representation(type: PasteboardTypes.png, data: Diagnostics.textImage("Build #4521 passed", size: NSSize(width: 900, height: 420)))],
+        representations: [
+          Representation(
+            type: PasteboardTypes.png,
+            data: Diagnostics.textImage("Build #4521 passed", size: NSSize(width: 900, height: 420))
+          ),
+        ],
         sourceBundleID: "com.apple.screencaptureui", sourceAppName: "Screenshot", capturedAt: now.addingTimeInterval(-20 * 60)
       ),
       text(Diagnostics.fakeAWSKey, app: "Terminal", bundleID: "com.apple.Terminal", minutesAgo: 5),

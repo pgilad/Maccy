@@ -38,7 +38,7 @@ struct KeyCombo: Codable, Hashable, Sendable {
     if Self.functionKeys.contains(Int(keyCode)) {
       return true
     }
-    return !modifiers.intersection([.command, .option, .control]).isEmpty
+    return !modifiers.isDisjoint(with: [.command, .option, .control])
   }
 
   func matches(_ event: NSEvent) -> Bool {

@@ -186,7 +186,9 @@ public actor HistoryStore {
         SELECT item_index, type, data, blob, size FROM representations WHERE item_id = ? ORDER BY ordinal
         """)
         .bind(.integer(id))
-        .rows { StoredRepresentation(itemIndex: $0.int(0), type: $0.string(1), data: $0.data(2), blob: $0.optionalString(3), size: $0.int(4)) }
+        .rows {
+          StoredRepresentation(itemIndex: $0.int(0), type: $0.string(1), data: $0.data(2), blob: $0.optionalString(3), size: $0.int(4))
+        }
         .filter { !newKeys.contains(RepresentationKey(itemIndex: $0.itemIndex, type: $0.type)) }
       orphanCandidates += try blobKeys(itemID: id)
       try database.prepare("DELETE FROM representations WHERE item_id = ?").bind(.integer(id)).run()

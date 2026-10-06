@@ -1,5 +1,5 @@
 # Maccy builds with the Command Line Tools only: `xcode-select --install`.
-# Common tasks: make install, make test, make self-test.
+# Common tasks: make install, make test, make self-test, make lint.
 
 SWIFT ?= swift
 APP_DIR ?= build/Maccy.app
@@ -8,8 +8,10 @@ INSTALL_DIR ?= /Applications
 # The Command Line Tools ship the Swift Testing macro plugin outside the default search path.
 TESTING_PLUGINS := $(shell xcode-select -p)/usr/lib/swift/host/plugins/testing
 TEST_FLAGS := $(if $(wildcard $(TESTING_PLUGINS)),-Xswiftc -plugin-path -Xswiftc $(TESTING_PLUGINS),)
+# SwiftLint needs SourceKit. Without Xcode, it must look in the Command Line Tools.
+LINT_ENV := $(if $(findstring CommandLineTools,$(shell xcode-select -p)),TOOLCHAIN_DIR=$(shell xcode-select -p),)
 
-.PHONY: build app install test perf self-test snapshots run clean signing-identity
+.PHONY: build app install test perf lint self-test snapshots run clean signing-identity
 
 build: ## Debug build
 	$(SWIFT) build
@@ -28,6 +30,9 @@ test: ## Unit tests (MaccyCore)
 
 perf: ## Search timings on 100,000 generated items
 	MACCY_PERF=1 $(SWIFT) test -c release $(TEST_FLAGS) --filter PerformanceTests
+
+lint: ## SwiftLint, warnings fail (brew install swiftlint)
+	$(LINT_ENV) swiftlint lint --strict --quiet
 
 self-test: build ## Capture, store, search and write-back on a private pasteboard
 	.build/debug/Maccy --self-test

@@ -1,8 +1,25 @@
+# Run with `make lint`. CI runs it with --strict, so a warning fails the build.
 included:
+  - Package.swift
   - Sources
   - Tests
 disabled_rules:
   - todo
+  # Multi-line collection literals end with a comma, so a new element is a one-line diff.
+  - trailing_comma
 line_length:
   warning: 140
   ignores_comments: true
+identifier_name:
+  # Coordinates and short names in tests.
+  excluded: [a, b, id, ok, x, y]
+large_tuple:
+  warning: 3
+cyclomatic_complexity:
+  warning: 15
+function_body_length:
+  warning: 100
+file_length:
+  warning: 1000
+type_body_length:
+  warning: 700

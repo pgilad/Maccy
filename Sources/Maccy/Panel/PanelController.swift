@@ -289,7 +289,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     return event
   }
 
-  // swiftlint:disable:next cyclomatic_complexity function_body_length
+  // swiftlint:disable:next cyclomatic_complexity
   private func handleKeyDown(_ event: NSEvent) -> NSEvent? {
     // Let an input method finish composition (for example Japanese or Chinese input).
     if let textView = panel.firstResponder as? NSTextView, textView.hasMarkedText() {

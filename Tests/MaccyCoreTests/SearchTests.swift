@@ -54,8 +54,8 @@ import Testing
   @Test func titlePrefixBeatsMiddle() {
     let now = Date.now
     let candidates = [
-      Ranker.Candidate(summary: ClipSummary(id: 1, kind: .text, title: "the deploy script", lastCopiedAt: now), bodyPrefix: "", ocrPrefix: ""),
-      Ranker.Candidate(summary: ClipSummary(id: 2, kind: .text, title: "deploy now", lastCopiedAt: now), bodyPrefix: "", ocrPrefix: ""),
+      candidate(id: 1, title: "the deploy script", at: now),
+      candidate(id: 2, title: "deploy now", at: now),
     ]
     let hits = Ranker.rank(candidates, terms: ["deploy"], now: now)
     #expect(hits.map(\.id) == [2, 1])
@@ -65,9 +65,13 @@ import Testing
   @Test func recencyBreaksTies() {
     let now = Date.now
     let candidates = [
-      Ranker.Candidate(summary: ClipSummary(id: 1, kind: .text, title: "alpha", lastCopiedAt: now.addingTimeInterval(-30 * 86_400)), bodyPrefix: "", ocrPrefix: ""),
-      Ranker.Candidate(summary: ClipSummary(id: 2, kind: .text, title: "alpha", lastCopiedAt: now), bodyPrefix: "", ocrPrefix: ""),
+      candidate(id: 1, title: "alpha", at: now.addingTimeInterval(-30 * 86_400)),
+      candidate(id: 2, title: "alpha", at: now),
     ]
     #expect(Ranker.rank(candidates, terms: ["alpha"], now: now).map(\.id) == [2, 1])
+  }
+
+  private func candidate(id: Int64, title: String, at date: Date) -> Ranker.Candidate {
+    Ranker.Candidate(summary: ClipSummary(id: id, kind: .text, title: title, lastCopiedAt: date), bodyPrefix: "", ocrPrefix: "")
   }
 }

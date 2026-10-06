@@ -76,7 +76,7 @@ struct ImagePreview: View {
           Image(nsImage: image)
             .resizable()
             .interpolation(.high)
-            .aspectRatio(contentMode: .fit)
+            .scaledToFit()
             .clipShape(.rect(cornerRadius: 6))
             .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
         } else {

@@ -66,6 +66,8 @@ final class SelfTest {
   private var failures = 0
   private var passes = 0
 
+  // A linear script: each step depends on the one before it.
+  // swiftlint:disable:next function_body_length
   func run() async -> Bool {
     let directory = Diagnostics.temporaryDirectory("selftest")
     defer { try? FileManager.default.removeItem(at: directory) }
@@ -171,7 +173,10 @@ final class SelfTest {
 
     let richID = (try? await store.search(SearchQuery.parse("Bold words"), limit: 1).hits.first?.id) ?? -1
     await controller.deliver(richID, as: .copy, plainText: true)
-    check(pasteboard.data(forType: .html) == nil && pasteboard.string(forType: .string) == "Bold words", "plain-text paste drops formatting")
+    check(
+      pasteboard.data(forType: .html) == nil && pasteboard.string(forType: .string) == "Bold words",
+      "plain-text paste drops formatting"
+    )
 
     await controller.deliver(imageID, as: .copy, plainText: true)
     check(pasteboard.data(forType: .png) != nil, "plain-text paste of an image keeps the image")
@@ -222,7 +227,9 @@ final class SelfTest {
     model.prepareForOpen(target: nil)
     await waitUntil { !model.isSearching && !model.rows.isEmpty }
     let host = NSHostingView(rootView: ClipboardView(model: model))
-    let panelWindow = NSWindow(contentRect: NSRect(x: -20_000, y: -20_000, width: 780, height: 500), styleMask: .borderless, backing: .buffered, defer: false)
+    let panelWindow = NSWindow(
+      contentRect: NSRect(x: -20_000, y: -20_000, width: 780, height: 500), styleMask: .borderless, backing: .buffered, defer: false
+    )
     panelWindow.contentView = host
     panelWindow.orderFrontRegardless()
     await waitUntil(timeout: .seconds(3)) { model.rowFrames[model.rows[0].id] != nil }

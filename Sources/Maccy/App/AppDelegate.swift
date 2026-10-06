@@ -174,10 +174,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
       },
       Task { [weak self] in
-        for await _ in Observations({ controller.revision }) {
-          if self?.panel.isOpen == true {
-            panelModel.historyDidChange()
-          }
+        for await _ in Observations({ controller.revision }) where self?.panel.isOpen == true {
+          panelModel.historyDidChange()
         }
       },
     ]
@@ -218,6 +216,8 @@ final class DefaultsObserver: NSObject {
     }
   }
 
+  // The keys are strings, not key paths, so the block-based API does not apply.
+  // swiftlint:disable:next block_based_kvo
   override nonisolated func observeValue(
     forKeyPath keyPath: String?,
     of object: Any?,

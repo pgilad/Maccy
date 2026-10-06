@@ -282,7 +282,10 @@ struct PrivacySettings: View {
           ForEach(SecretPolicy.allCases) { Text($0.title).tag($0) }
         }
       } footer: {
-        Text("Detects API keys and tokens (AWS, GitHub, GitLab, Slack, Stripe, Google, OpenAI, Anthropic, npm), JSON Web Tokens and private keys. Copies that password managers mark as concealed are never saved.")
+        Text(
+          "Detects API keys and tokens (AWS, GitHub, GitLab, Slack, Stripe, Google, OpenAI, Anthropic, npm), "
+            + "JSON Web Tokens and private keys. Copies that password managers mark as concealed are never saved."
+        )
           .font(.caption)
           .foregroundStyle(.secondary)
       }

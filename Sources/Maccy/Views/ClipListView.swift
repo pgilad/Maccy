@@ -176,7 +176,7 @@ struct ClipRow: View {
       if let thumbnail {
         Image(nsImage: thumbnail)
           .resizable()
-          .aspectRatio(contentMode: .fill)
+          .scaledToFill()
           .frame(width: 22, height: 22)
           .clipShape(.rect(cornerRadius: 4))
       } else {

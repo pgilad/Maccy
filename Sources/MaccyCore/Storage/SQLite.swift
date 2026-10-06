@@ -9,7 +9,7 @@ public struct SQLiteError: Error, CustomStringConvertible {
 }
 
 // SQLITE_TRANSIENT tells SQLite to copy bound buffers before the call returns.
-private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+private let transientDestructor = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
 /// A minimal wrapper around one SQLite connection.
 /// It is not thread-safe. Its owner (an actor) must serialize all access.
@@ -123,15 +123,15 @@ final class Statement {
         var copy = string
         result = copy.withUTF8 { buffer -> Int32 in
           guard let base = buffer.baseAddress else {
-            return sqlite3_bind_text(handle, index, "", 0, SQLITE_TRANSIENT)
+            return sqlite3_bind_text(handle, index, "", 0, transientDestructor)
           }
           return base.withMemoryRebound(to: CChar.self, capacity: buffer.count) { pointer in
-            sqlite3_bind_text64(handle, index, pointer, sqlite3_uint64(buffer.count), SQLITE_TRANSIENT, UInt8(SQLITE_UTF8))
+            sqlite3_bind_text64(handle, index, pointer, sqlite3_uint64(buffer.count), transientDestructor, UInt8(SQLITE_UTF8))
           }
         }
       case .blob(let data)?:
         result = data.withUnsafeBytes { buffer in
-          sqlite3_bind_blob64(handle, index, buffer.baseAddress, sqlite3_uint64(buffer.count), SQLITE_TRANSIENT)
+          sqlite3_bind_blob64(handle, index, buffer.baseAddress, sqlite3_uint64(buffer.count), transientDestructor)
         }
       }
       guard result == SQLITE_OK else {
@@ -222,6 +222,8 @@ struct Row {
       return ""
     }
     let count = Int(sqlite3_column_bytes(handle, index))
+    // Never fails: invalid UTF-8 becomes U+FFFD, so a damaged row still reads.
+    // swiftlint:disable:next optional_data_string_conversion
     return String(decoding: UnsafeBufferPointer(start: text, count: count), as: UTF8.self)
   }
 
