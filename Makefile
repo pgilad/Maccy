@@ -4,6 +4,8 @@
 SWIFT ?= swift
 APP_DIR ?= build/Maccy.app
 INSTALL_DIR ?= /Applications
+VERSION := $(shell tr -d '[:space:]' < VERSION)
+DIST_ZIP ?= build/Maccy-$(VERSION)-arm64.zip
 # Extra flags for swift build and swift test. CI uses -Xswiftc -warnings-as-errors.
 SWIFT_FLAGS ?=
 
@@ -13,13 +15,18 @@ TEST_FLAGS := $(if $(wildcard $(TESTING_PLUGINS)),-Xswiftc -plugin-path -Xswiftc
 # SwiftLint needs SourceKit. Without Xcode, it must look in the Command Line Tools.
 LINT_ENV := $(if $(findstring CommandLineTools,$(shell xcode-select -p)),TOOLCHAIN_DIR=$(shell xcode-select -p),)
 
-.PHONY: build app install test perf lint self-test snapshots readme-images run clean signing-identity
+.PHONY: build app dist install test perf lint self-test snapshots readme-images run clean signing-identity
 
 build: ## Debug build
 	$(SWIFT) build $(SWIFT_FLAGS)
 
 app: ## Release build, bundled and signed, in build/Maccy.app
 	APP_DIR=$(APP_DIR) SWIFT_FLAGS="$(SWIFT_FLAGS)" scripts/bundle.sh
+
+dist: app ## Release build zipped for download, with a SHA-256 file
+	rm -f "$(DIST_ZIP)" "$(DIST_ZIP).sha256"
+	ditto -c -k --keepParent "$(APP_DIR)" "$(DIST_ZIP)"
+	cd "$(dir $(DIST_ZIP))" && shasum -a 256 "$(notdir $(DIST_ZIP))" > "$(notdir $(DIST_ZIP)).sha256"
 
 install: app ## Build, then replace the app in /Applications and start it
 	-osascript -e 'tell application id "com.pgilad.Maccy" to quit' >/dev/null 2>&1

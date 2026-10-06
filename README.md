@@ -4,7 +4,7 @@
 
 <h1 align="center">Maccy</h1>
 
-<p align="center">A fast, private clipboard manager for macOS. Built from source.</p>
+<p align="center">A fast, private clipboard manager for macOS.</p>
 
 <p align="center">
   <a href="#install">Install</a> ·
@@ -24,7 +24,18 @@ Maccy keeps everything you copy and brings it back in a few keystrokes. This for
 
 ## Install
 
-Requires macOS 26 or later on Apple silicon, and the Command Line Tools (`xcode-select --install`). Xcode is not needed.
+Requires macOS 26 or later on Apple silicon. On first start, grant **Accessibility** so Maccy can paste into other apps.
+
+### Download
+
+1. Download `Maccy-<version>-arm64.zip` from the [latest release](https://github.com/pgilad/Maccy/releases/latest). Open it and move **Maccy** to **Applications**.
+2. Open Maccy. macOS blocks the first start, because the app is not notarized. Go to **System Settings → Privacy & Security** and click **Open Anyway**.
+
+To update, replace the app with a newer release. All releases are signed with the same certificate, so macOS keeps the Accessibility permission.
+
+### Build from source
+
+Requires the Command Line Tools (`xcode-select --install`). Xcode is not needed.
 
 ```fish
 git clone https://github.com/pgilad/Maccy.git
@@ -33,7 +44,7 @@ make signing-identity   # once per Mac
 make install            # build, sign, copy to /Applications and start
 ```
 
-On first start, grant **Accessibility** so Maccy can paste into other apps. `make signing-identity` creates a local code-signing certificate, so macOS keeps that permission after each rebuild.
+`make signing-identity` creates a local code-signing certificate, so macOS keeps the Accessibility permission after each rebuild.
 
 To update, run `git pull` and `make install`.
 
@@ -84,6 +95,13 @@ make self-test      # capture, search and paste on a private pasteboard
 make lint           # SwiftLint (brew install swiftlint)
 make run            # debug build with a throwaway data folder
 make readme-images  # render the screenshots above from the app's own views
+```
+
+To release, set the new version in `VERSION`, commit, and push a matching tag. The release workflow tests, builds and signs the app, then publishes the zip with build provenance.
+
+```fish
+git tag -a v3.0.1 -m "Maccy 3.0.1"
+git push origin v3.0.1
 ```
 
 ## License

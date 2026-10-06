@@ -37,4 +37,4 @@ jobs:
       - run: make lint
       - run: make test
       - run: make self-test
-      - run: make app
+      - run: make dist
