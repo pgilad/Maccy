@@ -91,6 +91,34 @@ import Testing
     #expect(clip.primaryImage == nil)
   }
 
+  @Test func attachmentPlaceholderWithImageIsImage() throws {
+    // Notes, Mail and chat apps put U+FFFC in the text for each attachment.
+    let red = try #require(ClipAnalyzer.analyze(imageWithText("\u{FFFC}", red: 1)))
+    let blue = try #require(ClipAnalyzer.analyze(imageWithText(" \u{FFFC}\n", red: 0)))
+    #expect(red.kind == .image)
+    #expect(red.title == "Image (8×8)")
+    #expect(red.primaryImage != nil)
+    #expect(red.contentHash != blue.contentHash)
+  }
+
+  @Test func textWithAttachmentPlaceholderHashesTheImage() throws {
+    let red = try #require(ClipAnalyzer.analyze(imageWithText("See \u{FFFC}", red: 1)))
+    let blue = try #require(ClipAnalyzer.analyze(imageWithText("See \u{FFFC}", red: 0)))
+    #expect(red.kind == .text)
+    #expect(red.contentHash != blue.contentHash)
+    // Without the placeholder, the same text is the same item, whatever image comes with it.
+    let plainRed = try #require(ClipAnalyzer.analyze(imageWithText("See this", red: 1)))
+    let plainBlue = try #require(ClipAnalyzer.analyze(imageWithText("See this", red: 0)))
+    #expect(plainRed.contentHash == plainBlue.contentHash)
+  }
+
+  private func imageWithText(_ text: String, red: CGFloat) -> CapturedClip {
+    CapturedClip(representations: [
+      Representation(type: PasteboardTypes.string, data: Data(text.utf8)),
+      Representation(type: PasteboardTypes.png, data: makeImage(width: 8, height: 8, red: red)),
+    ])
+  }
+
   @Test func filesBecomeFileItem() throws {
     let urls = ["/Users/me/a report.pdf", "/Users/me/b.txt"].map { URL(filePath: $0) }
     let clip = try #require(ClipAnalyzer.analyze(CapturedClip(representations: urls.enumerated().map {

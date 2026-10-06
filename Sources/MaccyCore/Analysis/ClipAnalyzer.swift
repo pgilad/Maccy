@@ -28,6 +28,10 @@ public struct AnalyzedClip: Sendable {
 
 public enum ClipAnalyzer {
   public static let maxIndexedTextLength = 100_000
+  /// U+FFFC (object replacement character) marks an attachment in the text of a copy
+  /// from Notes, Mail or a chat app. It is not text, so trim it like whitespace.
+  static let attachmentCharacter: Character = "\u{FFFC}"
+  private static let blankCharacters = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\u{FFFC}"))
 
   /// Returns `nil` when the copy has nothing worth saving.
   public static func analyze(_ clip: CapturedClip) -> AnalyzedClip? {
@@ -56,7 +60,7 @@ public enum ClipAnalyzer {
     }
 
     let plainText = plainText(in: representations)
-    let trimmed = plainText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    let trimmed = plainText?.trimmingCharacters(in: blankCharacters) ?? ""
     let hasRichText = representations.contains { $0.type == PasteboardTypes.rtf || $0.type == PasteboardTypes.html }
 
     let kind: ClipKind
@@ -74,6 +78,8 @@ public enum ClipAnalyzer {
       kind = .text
     }
 
+    // Text with an attachment placeholder is only the same copy when the attachment is too.
+    let attachment = plainText?.contains(attachmentCharacter) == true ? primaryImage : nil
     if kind != .image {
       primaryImage = nil
     }
@@ -96,7 +102,7 @@ public enum ClipAnalyzer {
 
     let imageSize = primaryImage.flatMap(ImageProcessing.pixelSize(of:))
     let title = makeTitle(kind: kind, text: trimmed, fileURLs: fileURLs, imageSize: imageSize)
-    let hash = contentHash(kind: kind, text: plainText ?? "", fileURLs: fileURLs, image: primaryImage)
+    let hash = contentHash(kind: kind, text: plainText ?? "", fileURLs: fileURLs, image: primaryImage ?? attachment)
     let detectedSecret = (kind == .text || kind == .link) ? SecretDetector.detect(in: plainText ?? "") : nil
 
     return AnalyzedClip(
@@ -173,6 +179,10 @@ public enum ClipAnalyzer {
     case .text, .link, .color:
       hasher.update(data: Data("text\0".utf8))
       hasher.update(data: Data(text.utf8))
+      if let image {
+        hasher.update(data: Data("\0attachment\0".utf8))
+        hasher.update(data: image)
+      }
     }
     return Data(hasher.finalize())
   }
