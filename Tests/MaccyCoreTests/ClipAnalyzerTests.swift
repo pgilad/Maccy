@@ -1,5 +1,7 @@
 import Foundation
+import ImageIO
 import Testing
+import UniformTypeIdentifiers
 @testable import MaccyCore
 
 @Suite struct ClipAnalyzerTests {
@@ -248,6 +250,33 @@ import Testing
     #expect(patterns.evaluate(text, timeLimit: .milliseconds(50)) == .timedOut)
     #expect(ContinuousClock.now - start < .seconds(2))
     #expect(patterns.evaluate("my password", timeLimit: .milliseconds(50)) == .match)
+  }
+}
+
+@Suite struct ImageProcessingTests {
+  @Test func thumbnailIsDownsampled() throws {
+    let thumbnail = try #require(ImageProcessing.thumbnailPNG(from: makeImage(width: 400, height: 200), maxPixelSize: 128))
+    let size = try #require(ImageProcessing.pixelSize(of: thumbnail))
+    #expect(size.width == 128)
+    #expect(size.height == 64)
+  }
+
+  @Test func orientationSwapsWidthAndHeight() throws {
+    // EXIF orientation 6: the pixels are stored rotated by 90 degrees.
+    let source = try #require(CGImageSourceCreateWithData(makeImage(width: 40, height: 20) as CFData, nil))
+    let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+    let output = NSMutableData()
+    let destination = try #require(CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil))
+    CGImageDestinationAddImage(destination, image, [kCGImagePropertyOrientation: 6] as CFDictionary)
+    #expect(CGImageDestinationFinalize(destination))
+    let rotated = output as Data
+
+    let size = try #require(ImageProcessing.pixelSize(of: rotated))
+    #expect(size.width == 20)
+    #expect(size.height == 40)
+    let preview = try #require(ImageProcessing.downsample(rotated, maxPixelSize: 40))
+    #expect(preview.width == 20)
+    #expect(preview.height == 40)
   }
 }
 

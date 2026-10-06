@@ -94,7 +94,8 @@ make build        # debug build
 make test         # unit tests for MaccyCore (Swift Testing)
 make self-test    # capture, store, search and paste-back on a private pasteboard
 make snapshots    # render the panel to build/snapshots/*.png
-make perf         # search timings on 100,000 generated items
+make perf         # search timings on 100,000 generated items, with time limits
+make lint         # SwiftLint, warnings fail (brew install swiftlint)
 make run          # run the debug build with a throwaway data folder
 make app          # release build in build/Maccy.app
 ```
@@ -107,6 +108,8 @@ Layout:
 - `Resources`: Info.plist, entitlements, icons. `scripts/bundle.sh` assembles and signs the app.
 
 `self-test` and `snapshots` exist only in debug builds. They never touch the real clipboard or your history.
+
+CI runs `make lint`, `make test`, `make self-test` and `make app` on each push, with a fixed Xcode and with compiler warnings as errors (`SWIFT_FLAGS=-Xswiftc -warnings-as-errors`). Dependabot keeps the commit-pinned actions up to date.
 
 ## License
 
