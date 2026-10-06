@@ -256,6 +256,35 @@ import Testing
     #expect(files.contains { $0.hasPrefix("history.sqlite.corrupt-") })
   }
 
+  @Test func oldDamagedCopiesAreDeleted() throws {
+    let directory = makeTemporaryDirectory()
+    let now = Date.now
+    let old = Int(now.timeIntervalSince1970 - HistoryStore.damagedCopyLifetime - 60)
+    let recent = Int(now.timeIntervalSince1970 - 60)
+    let names = ["history.sqlite.corrupt-\(old)", "history.sqlite.corrupt-\(old)-wal", "history.sqlite.corrupt-\(recent)"]
+    for name in names {
+      try Data("junk".utf8).write(to: directory.appending(path: name))
+    }
+    _ = try HistoryStore(directory: directory)
+    let files = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+    #expect(!files.contains(names[0]))
+    #expect(!files.contains(names[1]))
+    #expect(files.contains(names[2]))
+  }
+
+  @Test func databaseFromANewerVersionIsNotOpened() throws {
+    let directory = makeTemporaryDirectory()
+    _ = try HistoryStore(directory: directory)
+    let database = try SQLiteDatabase(path: directory.appending(path: HistoryStore.databaseFileName).path)
+    try database.execute("PRAGMA user_version = 99")
+    #expect(throws: HistoryStoreError.self) {
+      try HistoryStore(directory: directory)
+    }
+    // The file stays in place for the newer version.
+    let files = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+    #expect(!files.contains { $0.contains("corrupt") })
+  }
+
   @Test func garbageCollectionRemovesUnreferencedBlobs() async throws {
     let directory = makeTemporaryDirectory()
     let store = try HistoryStore(directory: directory)

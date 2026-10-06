@@ -75,6 +75,11 @@ enum Schema {
 
   static func migrate(_ database: SQLiteDatabase) throws {
     let version = try database.prepare("PRAGMA user_version").firstRow { $0.int(0) } ?? 0
+    // A newer Maccy wrote this file (for example before a downgrade). Its tables can
+    // differ, so stop rather than read or write them.
+    guard version <= migrations.count else {
+      throw HistoryStoreError.newerSchema(version: version, supported: migrations.count)
+    }
     guard version < migrations.count else {
       return
     }
@@ -90,6 +95,18 @@ enum Schema {
 func registerFunctions(_ database: SQLiteDatabase) throws {
   try registerRegexp(database)
   try registerContains(database)
+}
+
+public enum HistoryStoreError: Error, CustomStringConvertible {
+  case newerSchema(version: Int, supported: Int)
+
+  public var description: String {
+    switch self {
+    case .newerSchema(let version, let supported):
+      "A newer version of Maccy wrote the history database (schema \(version), this version reads up to "
+        + "\(supported)). Install the newer version, or move the database away to start a new history."
+    }
+  }
 }
 
 /// `maccy_contains(text, needle)`: case- and diacritic-insensitive substring match,

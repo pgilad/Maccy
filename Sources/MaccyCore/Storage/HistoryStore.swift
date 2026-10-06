@@ -45,6 +45,9 @@ public enum SearchResponse: Sendable, Equatable {
 /// and content-addressed files for large representations.
 public actor HistoryStore {
   public static let databaseFileName = "history.sqlite"
+  /// A damaged database moves aside for recovery. It can hold secrets, so it is
+  /// deleted after this time.
+  static let damagedCopyLifetime: TimeInterval = 7 * 86_400
   /// Representations larger than this go to a file, not into SQLite.
   static let inlineLimit = 32 * 1_024
   static let candidateLimit = 1_000
@@ -88,9 +91,25 @@ public actor HistoryStore {
       }
       database = try Self.openAndMigrate(path: path)
     }
+    Self.removeOldDamagedCopies(in: directory)
     self.directory = directory
     self.database = database
     self.blobs = try BlobStore(directory: directory.appending(path: "blobs", directoryHint: .isDirectory))
+  }
+
+  /// Deletes damaged copies (`history.sqlite.corrupt-<time>`, with `-wal` and `-shm`)
+  /// that are older than `damagedCopyLifetime`. The time in the name is the move time.
+  static func removeOldDamagedCopies(in directory: URL, now: Date = .now) {
+    let prefix = databaseFileName + ".corrupt-"
+    let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+    for name in names where name.hasPrefix(prefix) {
+      let timestamp = name.dropFirst(prefix.count).prefix { $0.isNumber }
+      guard let seconds = TimeInterval(timestamp),
+            now.timeIntervalSince1970 - seconds > damagedCopyLifetime else {
+        continue
+      }
+      try? FileManager.default.removeItem(at: directory.appending(path: name))
+    }
   }
 
   private static func openAndMigrate(path: String) throws -> SQLiteDatabase {
