@@ -584,8 +584,6 @@ public actor HistoryStore {
   private func regexSearch(_ pattern: String, query: SearchQuery, limit: Int) throws -> [SearchHit] {
     var conditions = ["(maccy_regexp(?, items.title) OR maccy_regexp(?, items.body) OR maccy_regexp(?, items.ocr))"]
     var bindings: [SQLiteValue] = [.text(pattern), .text(pattern), .text(pattern)]
-    // The regex scans every row anyway, so the words next to it scan too.
-    appendScanConditions(for: query.terms, to: &conditions, bindings: &bindings)
     appendFilters(query, to: &conditions, bindings: &bindings)
     let regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
     return try database.prepare("""

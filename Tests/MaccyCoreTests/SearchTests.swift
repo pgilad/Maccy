@@ -40,21 +40,23 @@ import Testing
     #expect(SearchQuery.parse(#"app:"Google Chr"#).app == "Google Chr")
   }
 
-  @Test func regexWithFiltersAndWords() {
-    let query = SearchQuery.parse(#"type:text /order \d+/ app:slack"#)
+  @Test func regexWithFilters() {
+    let query = SearchQuery.parse(#"type:text /order \d+/ app:"Google Chrome""#)
     #expect(query.regex == #"order \d+"#)
     #expect(query.kind == .text)
-    #expect(query.app == "slack")
+    #expect(query.app == "Google Chrome")
     #expect(query.terms.isEmpty)
-    let withSlash = SearchQuery.parse("/a/b/ word")
-    #expect(withSlash.regex == "a/b")
-    #expect(withSlash.terms == ["word"])
+    #expect(SearchQuery.parse("/a/b/ is:pinned").regex == "a/b")
   }
 
-  @Test func pathIsNotARegex() {
-    let query = SearchQuery.parse("/usr/bin")
-    #expect(query.regex == nil)
-    #expect(query.terms == ["/usr/bin"])
+  @Test(arguments: ["/usr/bin", "cp /var/log/*.log /tmp/", "mv /tmp/(draft /docs/", #""a /b c/ d""#, "/a/ word"])
+  func pathsAndWordsAreNotARegex(_ text: String) {
+    #expect(SearchQuery.parse(text).regex == nil)
+  }
+
+  @Test func quotedValueOnlyAfterAKnownFilter() {
+    #expect(SearchQuery.parse(#"json:"user_id""#).terms == ["json:", "user_id"])
+    #expect(SearchQuery.parse(#"APP:"Google Chrome""#).app == "Google Chrome")
   }
 
   @Test func unbalancedQuoteIsAPhrase() {

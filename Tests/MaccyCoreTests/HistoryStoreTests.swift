@@ -112,15 +112,16 @@ import Testing
     #expect(try await store.search(SearchQuery.parse("/([/"), limit: 10) == .invalidRegex("(["))
   }
 
-  @Test func regexWithFiltersAndWords() async throws {
+  @Test func regexWithFilters() async throws {
     let store = try makeStore()
     try await insert(store, "order 12345", app: "Slack")
     try await insert(store, "order 999", app: "Notes")
-    try await insert(store, "order 777 shipped", app: "Notes")
     let slack = try await store.search(SearchQuery.parse(#"/order \d+/ app:slack"#), limit: 10).hits
     #expect(slack.map(\.summary.title) == ["order 12345"])
-    let word = try await store.search(SearchQuery.parse(#"/order \d+/ shipped"#), limit: 10).hits
-    #expect(word.map(\.summary.title) == ["order 777 shipped"])
+    // Paths are words, not a regex.
+    try await insert(store, "cp /var/log/*.log /tmp/")
+    let path = try await store.search(SearchQuery.parse("cp /var/log/*.log /tmp/"), limit: 10).hits
+    #expect(path.map(\.summary.title) == ["cp /var/log/*.log /tmp/"])
   }
 
   /// Full-text syntax in a query is plain text: each term is quoted for FTS5.

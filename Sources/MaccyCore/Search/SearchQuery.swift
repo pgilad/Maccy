@@ -8,8 +8,8 @@ import Foundation
 /// - `type:image` (or `text`, `link`, `file`, `color`) filters by kind.
 /// - `app:slack` filters by source application. `app:"Google Chrome"` quotes a value.
 /// - `is:pinned` shows pinned items only.
-/// - `/regex/` matches a regular expression (case-insensitive). Filters and words
-///   can come before or after it: `type:text /order \d+/`.
+/// - `/regex/` matches a regular expression (case-insensitive). Filters can come
+///   before or after it: `type:text /order \d+/`.
 public struct SearchQuery: Sendable, Equatable {
   public var terms: [String] = []
   public var kind: ClipKind?
@@ -33,7 +33,9 @@ public struct SearchQuery: Sendable, Equatable {
   public static func parse(_ text: String, kind: ClipKind? = nil) -> SearchQuery {
     var query = SearchQuery(kind: kind)
     var rest = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    if let regex = extractRegex(rest) {
+    // A regex only when everything else is a filter. Paths have slashes too:
+    // `cp /var/log/*.log /tmp/` is a search for words, not a regex.
+    if let regex = extractRegex(rest), tokenize(regex.remainder).allSatisfy({ isFilter($0) }) {
       query.regex = regex.pattern
       rest = regex.remainder
     }
@@ -75,6 +77,20 @@ public struct SearchQuery: Sendable, Equatable {
     )
   }
 
+  /// Filters that take a value, so a quoted value after them belongs to them.
+  private static let valueFilters = ["type:", "kind:", "app:"]
+
+  private static func isFilter(_ token: Token) -> Bool {
+    guard !token.isPhrase else {
+      return false
+    }
+    let lowercased = token.text.lowercased()
+    if let value = value(of: lowercased, prefixes: ["type:", "kind:"]) {
+      return ClipKind(searchToken: value) != nil
+    }
+    return lowercased == "is:pinned" || value(of: token.text, prefixes: ["app:"])?.isEmpty == false
+  }
+
   private static func value(of token: String, prefixes: [String]) -> String? {
     for prefix in prefixes where token.lowercased().hasPrefix(prefix) {
       return String(token.dropFirst(prefix.count))
@@ -101,7 +117,8 @@ public struct SearchQuery: Sendable, Equatable {
           }
           current = ""
           quotedValue = false
-        } else if current.hasSuffix(":") {
+        } else if valueFilters.contains(current.lowercased()) {
+          // Only after a known filter: `json:"user_id"` (a Go struct tag) stays two terms.
           quotedValue = true
         } else if !current.isEmpty {
           tokens.append(Token(text: current, isPhrase: false))
