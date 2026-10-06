@@ -53,16 +53,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   }
 
   private func observe() {
+    // The endless loop holds `self` weakly. Before, it bound `self` strongly first.
+    let changes = Observations { [preferences, controller] in
+      (preferences.menuIcon, preferences.isPaused, preferences.showInMenuBar,
+       preferences.showRecentCopyInMenuBar, controller.latestTitle)
+    }
     Task { [weak self] in
-      guard let self else {
-        return
-      }
-      let changes = Observations { [preferences, controller] in
-        (preferences.menuIcon, preferences.isPaused, preferences.showInMenuBar,
-         preferences.showRecentCopyInMenuBar, controller.latestTitle)
-      }
       for await _ in changes {
-        update()
+        self?.update()
       }
     }
   }

@@ -41,20 +41,21 @@ final class HistoryController {
     self.preferences = preferences
     self.store = store
     self.writer = PasteboardWriter(pasteboard: pasteboard)
-    self.monitor = ClipboardMonitor(pasteboard: pasteboard, defaults: defaults) { [store] clip, rules in
+    // Weak: the controller owns the monitor, and the monitor owns this closure.
+    self.monitor = ClipboardMonitor(pasteboard: pasteboard, defaults: defaults) { [store, weak self] clip, rules in
       Task {
         let outcome = await Self.ingest(clip, rules: rules, store: store)
         await MainActor.run {
           if let outcome {
-            self.didIngest(outcome)
+            self?.didIngest(outcome)
           }
-          self.processedCaptures += 1
+          self?.processedCaptures += 1
         }
         if let image = outcome?.imageForOCR, let id = outcome?.result.id {
           await Self.recognizeText(in: image, id: id, store: store)
           await MainActor.run {
-            self.revision += 1
-            self.processedOCR += 1
+            self?.revision += 1
+            self?.processedOCR += 1
           }
         }
       }
@@ -141,17 +142,16 @@ final class HistoryController {
   /// Prunes now, then again at the next expiry or in one hour, whichever is first.
   func scheduleRetention() {
     pruneTask?.cancel()
+    let store = store
+    // The loop holds `self` only for the prune, not during the sleep of up to an hour.
     pruneTask = Task { [weak self] in
       while !Task.isCancelled {
-        guard let self else {
-          return
-        }
         let nextExpiry = try? await store.nextExpiry()
         let hour = Date.now.addingTimeInterval(3_600)
         let wake = min(nextExpiry ?? hour, hour)
         let delay = max(1, wake.timeIntervalSinceNow)
         try? await Task.sleep(for: .seconds(delay))
-        guard !Task.isCancelled else {
+        guard !Task.isCancelled, let self else {
           return
         }
         // An unstructured task: a later reschedule must not interrupt a running prune.

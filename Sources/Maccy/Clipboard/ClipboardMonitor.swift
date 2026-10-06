@@ -15,14 +15,15 @@ nonisolated struct SourceApp: Sendable, Equatable {
 nonisolated final class ClipboardMonitor: Sendable {
   // NSPasteboard and UserDefaults are thread-safe, but not marked Sendable.
   nonisolated(unsafe) private let pasteboard: NSPasteboard
-  private let queue = DispatchQueue(label: "com.pgilad.Maccy.capture", qos: .userInitiated)
+  // Utility, not user-initiated: the poll runs four times a second, all day.
+  private let queue = DispatchQueue(label: "com.pgilad.Maccy.capture", qos: .utility)
   private let state: Mutex<State>
   private let rules = Mutex(CaptureRules())
   private let sourceApp = Mutex<SourceApp?>(nil)
   nonisolated(unsafe) private let defaults: UserDefaults
   private let onCapture: @Sendable (CapturedClip, CaptureRules) -> Void
 
-  private struct State: @unchecked Sendable {
+  private struct State {
     var timer: DispatchSourceTimer?
     var lastChangeCount: Int
     var ownChangeCounts: Set<Int> = []
@@ -41,7 +42,8 @@ nonisolated final class ClipboardMonitor: Sendable {
 
   func start(interval: TimeInterval) {
     let timer = DispatchSource.makeTimerSource(queue: queue)
-    timer.schedule(deadline: .now() + interval, repeating: interval, leeway: .milliseconds(50))
+    // A leeway of a quarter of the interval lets macOS group the timer with other work.
+    timer.schedule(deadline: .now() + interval, repeating: interval, leeway: .milliseconds(Int(interval * 250)))
     timer.setEventHandler { [weak self] in
       self?.poll()
     }
