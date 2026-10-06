@@ -90,14 +90,15 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     // The same place for every way to open the panel (icon, shortcut, Finder).
     let position = preferences.panelPosition
-    let screen = screenForPanel(position: position)
+    let windowFrame = position == .activeWindow ? frontmost.flatMap(Self.windowFrame(of:)) : nil
+    let screen = screenForPanel(position: position, windowFrame: windowFrame)
     var size = preferences.windowSize
     if let visible = screen?.visibleFrame {
       size.width = min(max(size.width, panel.minSize.width), visible.width)
       size.height = min(max(size.height, panel.minSize.height), visible.height)
     }
     panel.setContentSize(size)
-    panel.setFrameOrigin(origin(for: position, size: size, screen: screen, frontmost: frontmost))
+    panel.setFrameOrigin(origin(for: position, size: size, screen: screen, windowFrame: windowFrame))
     panel.orderFrontRegardless()
     panel.makeKey()
     isOpen = true
@@ -164,15 +165,22 @@ final class PanelController: NSObject, NSWindowDelegate {
 
   // MARK: - Position
 
-  private func screenForPanel(position: PanelPosition) -> NSScreen? {
+  private func screenForPanel(position: PanelPosition, windowFrame: NSRect?) -> NSScreen? {
     if position == .menuBarIcon, let screen = statusButton?.window?.screen {
+      return screen
+    }
+    // The screen of the active window. The screen under the pointer can be another one,
+    // and the panel then moved to the edge of that screen.
+    if let windowFrame, let screen = NSScreen.screens.first(where: {
+      $0.frame.contains(NSPoint(x: windowFrame.midX, y: windowFrame.midY))
+    }) {
       return screen
     }
     let mouse = NSEvent.mouseLocation
     return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
   }
 
-  private func origin(for position: PanelPosition, size: NSSize, screen: NSScreen?, frontmost: NSRunningApplication?) -> NSPoint {
+  private func origin(for position: PanelPosition, size: NSSize, screen: NSScreen?, windowFrame: NSRect?) -> NSPoint {
     let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1_440, height: 900)
     var origin: NSPoint
     switch position {
@@ -189,7 +197,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         origin = NSPoint(x: visible.maxX - size.width - 8, y: visible.maxY - size.height)
       }
     case .activeWindow:
-      if let frame = frontmost.flatMap(Self.windowFrame(of:)) {
+      if let frame = windowFrame {
         origin = NSPoint(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2)
       } else {
         origin = NSPoint(x: visible.midX - size.width / 2, y: visible.midY - size.height / 2)
