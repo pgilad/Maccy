@@ -317,8 +317,9 @@ final class PanelController: NSObject, NSWindowDelegate {
       return nil
     }
 
+    let key = Self.shortcutKey(for: event)
     // The panel has no close button, so the Close menu item cannot close it.
-    if keyCode == kVK_ANSI_W && modifiers == .command {
+    if key == "w" && modifiers == .command {
       close()
       return nil
     }
@@ -336,6 +337,7 @@ final class PanelController: NSObject, NSWindowDelegate {
       }
     }
 
+    // Special keys by key code. Letters, digits and "," by character: see shortcutKey(for:).
     switch (keyCode, modifiers) {
     case (kVK_Escape, []):
       if model.query.isEmpty && model.kindFilter == nil {
@@ -344,9 +346,9 @@ final class PanelController: NSObject, NSWindowDelegate {
         model.query = ""
         model.kindFilter = nil
       }
-    case (kVK_DownArrow, []), (kVK_ANSI_N, .control), (kVK_ANSI_J, .control):
+    case (kVK_DownArrow, []):
       model.move(by: 1)
-    case (kVK_UpArrow, []), (kVK_ANSI_P, .control), (kVK_ANSI_K, .control):
+    case (kVK_UpArrow, []):
       model.move(by: -1)
     case (kVK_PageDown, []):
       model.move(by: 10)
@@ -362,47 +364,68 @@ final class PanelController: NSObject, NSWindowDelegate {
       model.performSecondary()
     case (kVK_Return, .option), (kVK_Return, [.option, .shift]):
       model.pastePlainText()
-    case (kVK_ANSI_K, .command):
-      showActions()
-    case (kVK_ANSI_Comma, .command):
-      model.onOpenSettings()
-    case (kVK_ANSI_P, .command):
-      model.cycleKindFilter()
-    case (kVK_ANSI_P, [.command, .shift]):
-      model.togglePin()
     case (kVK_Delete, .command) where model.query.isEmpty:
       // While the user types, ⌘⌫ keeps its text meaning (delete to the line start).
       model.deleteSelected()
     case (kVK_Delete, [.command, .shift]):
       model.onRequestClearHistory()
-    case (kVK_ANSI_E, .command):
-      model.beginEditing()
-    case (kVK_ANSI_O, .command), (kVK_ANSI_S, .command), (kVK_ANSI_F, [.command, .shift]), (kVK_ANSI_C, [.command, .shift]):
-      return runAction(for: keyCode, modifiers: modifiers) ? nil : event
     default:
-      if modifiers == .command, let digit = Self.digitKeys.firstIndex(of: keyCode) {
-        model.performPrimary(atRow: digit)
-        return nil
-      }
-      return event
+      return handleCharacterKey(key, modifiers: modifiers) ? nil : event
     }
     return nil
   }
 
-  private static let digitKeys = [
-    kVK_ANSI_1, kVK_ANSI_2, kVK_ANSI_3, kVK_ANSI_4, kVK_ANSI_5, kVK_ANSI_6, kVK_ANSI_7, kVK_ANSI_8, kVK_ANSI_9,
+  /// Returns `false` for a key that the panel does not handle.
+  private func handleCharacterKey(_ key: String?, modifiers: NSEvent.ModifierFlags) -> Bool {
+    switch (key, modifiers) {
+    case ("n"?, .control), ("j"?, .control):
+      model.move(by: 1)
+    case ("p"?, .control), ("k"?, .control):
+      model.move(by: -1)
+    case ("k"?, .command):
+      showActions()
+    case (","?, .command):
+      model.onOpenSettings()
+    case ("p"?, .command):
+      model.cycleKindFilter()
+    case ("p"?, [.command, .shift]):
+      model.togglePin()
+    case ("e"?, .command):
+      model.beginEditing()
+    case let (key?, modifiers) where ["o", "s", "f", "c"].contains(key) && !modifiers.isEmpty:
+      return runAction(key: key, modifiers: modifiers)
+    case let (key?, .command) where key.count == 1 && ("1"..."9").contains(key):
+      model.performPrimary(atRow: Int(key)! - 1)
+    default:
+      return false
+    }
+    return true
+  }
+
+  /// The key of a shortcut, as the menus show it: the character that the layout
+  /// types, so ⌘W is the key labeled W on Dvorak or AZERTY. Before, the panel
+  /// matched US key positions, and on Dvorak ⌘W opened Settings. A layout without
+  /// that character (Hebrew, Russian, or AZERTY digits) uses the US key position,
+  /// like the menus do.
+  static func shortcutKey(for event: NSEvent) -> String? {
+    if let characters = event.charactersIgnoringModifiers?.lowercased(), characters.count == 1,
+       let character = characters.first, character.isASCII, character.isLetter || character.isNumber || character == "," {
+      return characters
+    }
+    return usKeys[Int(event.keyCode)]
+  }
+
+  private static let usKeys: [Int: String] = [
+    kVK_ANSI_A: "a", kVK_ANSI_B: "b", kVK_ANSI_C: "c", kVK_ANSI_D: "d", kVK_ANSI_E: "e", kVK_ANSI_F: "f",
+    kVK_ANSI_G: "g", kVK_ANSI_H: "h", kVK_ANSI_I: "i", kVK_ANSI_J: "j", kVK_ANSI_K: "k", kVK_ANSI_L: "l",
+    kVK_ANSI_M: "m", kVK_ANSI_N: "n", kVK_ANSI_O: "o", kVK_ANSI_P: "p", kVK_ANSI_Q: "q", kVK_ANSI_R: "r",
+    kVK_ANSI_S: "s", kVK_ANSI_T: "t", kVK_ANSI_U: "u", kVK_ANSI_V: "v", kVK_ANSI_W: "w", kVK_ANSI_X: "x",
+    kVK_ANSI_Y: "y", kVK_ANSI_Z: "z", kVK_ANSI_1: "1", kVK_ANSI_2: "2", kVK_ANSI_3: "3", kVK_ANSI_4: "4",
+    kVK_ANSI_5: "5", kVK_ANSI_6: "6", kVK_ANSI_7: "7", kVK_ANSI_8: "8", kVK_ANSI_9: "9", kVK_ANSI_Comma: ",",
   ]
 
   /// Runs the action that has this shortcut, if the selected item supports it.
-  private func runAction(for keyCode: Int, modifiers: NSEvent.ModifierFlags) -> Bool {
-    let key: String
-    switch keyCode {
-    case kVK_ANSI_O: key = "o"
-    case kVK_ANSI_S: key = "s"
-    case kVK_ANSI_F: key = "f"
-    case kVK_ANSI_C: key = "c"
-    default: return false
-    }
+  private func runAction(key: String, modifiers: NSEvent.ModifierFlags) -> Bool {
     guard let action = model.actions.first(where: { $0.keyEquivalent == key && $0.modifiers == modifiers }) else {
       return false
     }

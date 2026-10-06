@@ -76,9 +76,10 @@ extension PanelModel {
           keyEquivalent: "s", modifiers: .command
         ) { [self] in Task { await controller.saveImage(row.id) } })
         if let text = detail?.ocrText, !text.isEmpty {
+          // ⌥⌘C, not ⇧⌘C: that is the default global shortcut, which closes the panel.
           list.append(ClipAction(
             id: "ocr", title: "Copy Text in Image", symbol: "text.viewfinder", section: .open,
-            keyEquivalent: "c", modifiers: [.command, .shift]
+            keyEquivalent: "c", modifiers: [.command, .option]
           ) { [self] in controller.copyText(text) })
         }
       }
@@ -101,6 +102,14 @@ extension PanelModel {
     list.append(ClipAction(
       id: "settings", title: "Settings…", symbol: "gearshape", section: .app, keyEquivalent: ",", modifiers: .command
     ) { [self] in onOpenSettings() })
+    // In the panel, the global shortcut closes the panel or selects the next row, so an
+    // action with the same keys cannot run from the keyboard. Do not show those keys.
+    if let hotKey = preferences.hotKey, let key = hotKey.menuKeyEquivalent {
+      for index in list.indices where list[index].keyEquivalent == key && list[index].modifiers == hotKey.modifiers {
+        list[index].keyEquivalent = ""
+        list[index].modifiers = []
+      }
+    }
     return list
   }
 

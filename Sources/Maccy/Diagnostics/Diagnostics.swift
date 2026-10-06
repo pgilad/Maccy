@@ -256,8 +256,29 @@ final class SelfTest {
     check(KeyCombo(keyCode: UInt16(kVK_F5), modifiers: .option).menuKeyEquivalent == String(Character(NSEvent.SpecialKey.f5.unicodeScalar)),
           "a function-key shortcut becomes a menu key equivalent")
 
+    // 16. Panel shortcuts follow the characters of the layout, with the US key position as the fallback.
+    check(PanelController.shortcutKey(for: keyEvent(UInt16(kVK_ANSI_Comma), "w")) == "w", "on Dvorak, the key labeled W is ⌘W")
+    check(PanelController.shortcutKey(for: keyEvent(UInt16(kVK_ANSI_K), "ל")) == "k", "on Hebrew, ⌘K uses the US key position")
+    check(PanelController.shortcutKey(for: keyEvent(UInt16(kVK_ANSI_1), "&")) == "1", "on AZERTY, ⌘1 uses the US key position")
+    // The image has OCR text, so it has "Copy Text in Image". The global shortcut (⇧⌘C) closes the panel.
+    model.query = ""
+    await waitUntil { !model.isSearching }
+    await model.select(imageID)
+    let hotKey = preferences.hotKey
+    check(model.actions.contains { $0.id == "ocr" && $0.keyEquivalent == "c" && $0.modifiers == [.command, .option] },
+          "Copy Text in Image is ⌥⌘C")
+    check(!model.actions.contains { $0.keyEquivalent == hotKey?.menuKeyEquivalent && $0.modifiers == hotKey?.modifiers },
+          "no action shows the global shortcut")
+
     print("\nSelf-test: \(passes) passed, \(failures) failed")
     return failures == 0
+  }
+
+  private func keyEvent(_ keyCode: UInt16, _ characters: String) -> NSEvent {
+    NSEvent.keyEvent(
+      with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: 0, context: nil,
+      characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode
+    )!
   }
 
   private func check(_ condition: Bool, _ name: String) {
