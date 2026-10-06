@@ -172,14 +172,49 @@ import Testing
     FakeSecrets.jwt,
     FakeSecrets.privateKey,
     FakeSecrets.gitlabToken,
+    FakeSecrets.gitlabTokenEndingInDash,
+    FakeSecrets.googleKeyEndingInDash,
+    FakeSecrets.openAIProjectKey,
+    FakeSecrets.openAILegacyKey,
+    FakeSecrets.anthropicKey,
+    FakeSecrets.npmToken,
+    FakeSecrets.slackAppToken,
+    FakeSecrets.slackConfigToken,
+    FakeSecrets.slackWebhook,
+    FakeSecrets.azureConnectionString,
+    FakeSecrets.pgpPrivateKey,
+    FakeSecrets.encryptedPrivateKey,
+    "key=" + FakeSecrets.googleKey + ";",
   ])
   func detectsSecrets(_ text: String) {
     #expect(SecretDetector.detect(in: text) != nil)
   }
 
-  @Test(arguments: ["hello world", "AKIA is a prefix", "https://github.com/pgilad/Maccy", "sk-short"])
+  @Test(arguments: [
+    "hello world",
+    "AKIA is a prefix",
+    "https://github.com/pgilad/Maccy",
+    "sk-short",
+    "git checkout sk-1234-add-retry-logic-to-payment-webhook",
+    "sk-proj-cleanup",
+    "-----BEGIN PUBLIC KEY-----",
+    "-----BEGIN CERTIFICATE-----",
+    "AIza is how Google keys start",
+    "eyJhbGciOiJIUzI1NiJ9 alone is a header, not a token",
+  ])
   func ignoresNormalText(_ text: String) {
     #expect(SecretDetector.detect(in: text) == nil)
+  }
+
+  @Test func anthropicKeyIsNotNamedOpenAI() {
+    #expect(SecretDetector.detect(in: FakeSecrets.anthropicKey) == "Anthropic key")
+    #expect(SecretDetector.detect(in: FakeSecrets.openAIProjectKey) == "OpenAI key")
+  }
+
+  @Test func secretDeepInLargeTextIsDetected() {
+    let log = String(repeating: "INFO request served in 12 ms\n", count: 5_000)
+    #expect(log.utf16.count > 100_000)
+    #expect(SecretDetector.detect(in: log + FakeSecrets.privateKey) == "Private key")
   }
 
   @Test func secretsAreMarkedOnTextItems() throws {

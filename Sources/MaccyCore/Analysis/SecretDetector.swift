@@ -7,30 +7,43 @@ public enum SecretDetector {
     let regex: NSRegularExpression
   }
 
+  /// The end of a token that can contain `-`. `\b` fails after a final `-`, so a
+  /// key that ends with `-` (about 1 in 64 for base64url) would not match.
+  private static let tokenEnd = "(?![A-Za-z0-9_-])"
+
   // Patterns are anchored on well-known token prefixes to keep false positives low.
+  // Order matters: the first match names the secret, so a specific rule comes first.
   public static let rules: [Rule] = [
     ("AWS access key", #"\b(AKIA|ASIA|ABIA|ACCA)[0-9A-Z]{16}\b"#),
     ("GitHub token", #"\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}\b"#),
     ("GitHub token", #"\bgithub_pat_[A-Za-z0-9_]{60,}\b"#),
-    ("GitLab token", #"\bglpat-[A-Za-z0-9_\-]{20,}\b"#),
-    ("Slack token", #"\bxox[abposr]-[A-Za-z0-9-]{10,}\b"#),
+    ("GitLab token", #"\bglpat-[A-Za-z0-9_-]{20,}"# + tokenEnd),
+    // Bot, user, app, refresh and configuration tokens (xoxe.xoxp-… matches at xoxp-).
+    ("Slack token", #"\bxox[abeoprs]-[A-Za-z0-9-]{10,}"# + tokenEnd),
+    ("Slack token", #"\bxapp-\d-[A-Za-z0-9-]{10,}"# + tokenEnd),
     ("Slack webhook", #"https://hooks\.slack\.com/services/[A-Za-z0-9/_-]{20,}"#),
     ("Stripe key", #"\b[rs]k_(live|test)_[A-Za-z0-9]{20,}\b"#),
-    ("Google API key", #"\bAIza[0-9A-Za-z_\-]{35}\b"#),
-    ("OpenAI key", #"\bsk-(proj-)?[A-Za-z0-9_\-]{32,}\b"#),
-    ("Anthropic key", #"\bsk-ant-[A-Za-z0-9_\-]{32,}\b"#),
+    ("Google API key", #"\bAIza[0-9A-Za-z_-]{35}"# + tokenEnd),
+    ("Anthropic key", #"\bsk-ant-[A-Za-z0-9_-]{32,}"# + tokenEnd),
+    // Project, service account and admin keys, then the two older formats. A plain
+    // `sk-` with dashes is often a branch name (sk-1234-fix-login), so it does not match.
+    ("OpenAI key", #"\bsk-(proj|svcacct|admin)-[A-Za-z0-9_-]{40,}"# + tokenEnd),
+    ("OpenAI key", #"\bsk-[A-Za-z0-9]{20}T3BlbkFJ[A-Za-z0-9]{20}\b"#),
+    ("OpenAI key", #"\bsk-[A-Za-z0-9]{48}\b"#),
     ("npm token", #"\bnpm_[A-Za-z0-9]{36}\b"#),
-    ("JSON Web Token", #"\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{16,}\b"#),
-    ("Private key", #"-----BEGIN ([A-Z]+ )?PRIVATE KEY-----"#),
+    ("JSON Web Token", #"\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{16,}"# + tokenEnd),
+    // RSA, EC, OPENSSH, ENCRYPTED and PGP (… PRIVATE KEY BLOCK) keys.
+    ("Private key", #"-----BEGIN ([A-Z0-9]+ ){0,3}PRIVATE KEY( BLOCK)?-----"#),
     ("Azure connection string", #"AccountKey=[A-Za-z0-9+/=]{40,}"#),
   ].compactMap { name, pattern in
     (try? NSRegularExpression(pattern: pattern)).map { Rule(name: name, regex: $0) }
   }
 
   /// Returns the name of the first rule that matches, or `nil`.
+  /// Each rule is anchored on a prefix, so the scan is linear: about 1 s for 20 MB
+  /// (the largest text that Maccy saves). It runs off the main thread.
   public static func detect(in text: String) -> String? {
-    // Secrets are short. Skip the scan for very large texts.
-    guard !text.isEmpty, text.utf16.count <= 100_000 else {
+    guard !text.isEmpty else {
       return nil
     }
     let range = NSRange(text.startIndex..., in: text)

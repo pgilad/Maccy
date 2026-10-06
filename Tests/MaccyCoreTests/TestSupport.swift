@@ -72,4 +72,19 @@ enum FakeSecrets {
   static let jwt = "ey" + "JhbGciOiJIUzI1NiJ9." + "ey" + "JzdWIiOiIxMjM0NTY3ODkwIn0." + "dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
   static let privateKey = "-----BEGIN OPENSSH " + "PRIVATE KEY-----\nabc"
   static let gitlabToken = "gl" + "pat-" + "abcdefghijklmnopqrst"
+  /// 20 characters after the prefix, the last one a `-`.
+  static let gitlabTokenEndingInDash = "gl" + "pat-" + "abcdefghijklmnopqrs-"
+  /// 35 characters after the prefix, the last one a `-`.
+  static let googleKeyEndingInDash = "AI" + "za" + "SyA-abcdefghijklmnopqrstuvwxyz1234-"
+  static let openAIProjectKey = "sk-" + "proj-" + String(repeating: "Ab1_xY9-", count: 8)
+  static let openAILegacyKey = "sk-" + "abcdefghij0123456789" + "T3Blbk" + "FJ" + "abcdefghij0123456789"
+  static let anthropicKey = "sk-" + "ant-" + "api03-" + String(repeating: "aB3_x-Y9", count: 6)
+  static let npmToken = "np" + "m_" + "abcdefghijklmnopqrstuvwxyz0123456789"
+  static let slackAppToken = "xa" + "pp-" + "1-A0123456789-0123456789012-abcdef"
+  static let slackConfigToken = "xo" + "xe-" + "1-abcdefghijklmnop"
+  static let slackWebhook = "https://hooks.slack.com/" + "services/" + "T0000/B0000/abcdefghijklmnopqrstuvwx"
+  static let azureConnectionString = "DefaultEndpointsProtocol=https;AccountName=demo;Account" + "Key="
+    + String(repeating: "abcdEFGH0123+/==", count: 4)
+  static let pgpPrivateKey = "-----BEGIN PGP " + "PRIVATE KEY BLOCK-----\nabc"
+  static let encryptedPrivateKey = "-----BEGIN ENCRYPTED " + "PRIVATE KEY-----\nabc"
 }

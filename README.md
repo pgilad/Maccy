@@ -24,7 +24,7 @@ A fast, private clipboard manager for macOS 26 and later, built from source. It 
 
 - Copies that password managers mark as concealed or transient ([nspasteboard.org](http://nspasteboard.org)) are never read.
 - Password managers are ignored by default (1Password, Apple Passwords, Keychain Access, Bitwarden, KeePassXC, Dashlane).
-- Copies that look like credentials (AWS, GitHub, GitLab, Slack, Stripe, Google, OpenAI, Anthropic and npm tokens, JWTs, private keys) are deleted after 15 minutes by default, or not saved at all.
+- Copies that look like credentials (AWS, GitHub, GitLab, Slack, Stripe, Google, OpenAI, Anthropic, npm and Azure keys and tokens, JWTs, private keys including PGP) are deleted after 15 minutes by default, or not saved at all.
 - The App Sandbox is on. The history lives in the app container, where macOS asks for consent before another app reads it. The data folder is excluded from Time Machine.
 - SQLite runs with `secure_delete`, so deleted items are overwritten in the database file.
 - No clipboard content in logs or notifications.
