@@ -13,19 +13,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private var observationTasks: [Task<Void, Never>] = []
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    let store: HistoryStore
-    do {
-      store = try HistoryStore(directory: Paths.dataDirectory)
-    } catch {
-      Log.app.fault("Cannot open the history store: \(String(describing: error), privacy: .public)")
-      let alert = NSAlert()
-      alert.messageText = "Maccy cannot open its history database."
-      alert.informativeText = String(describing: error)
-      alert.runModal()
-      NSApp.terminate(nil)
-      return
+    Task {
+      switch await Self.openStore(at: Paths.dataDirectory) {
+      case .success(let store):
+        finishLaunching(with: store)
+      case .failure(let error):
+        Log.app.fault("Cannot open the history store: \(String(describing: error), privacy: .public)")
+        let alert = NSAlert()
+        alert.messageText = "Maccy cannot open its history database."
+        alert.informativeText = String(describing: error)
+        alert.runModal()
+        NSApp.terminate(nil)
+      }
     }
+  }
 
+  /// The open checks the integrity of the whole file (`PRAGMA quick_check`): about 3 s
+  /// for 100,000 items. Off the main thread, the app does not hang at login.
+  @concurrent
+  nonisolated private static func openStore(at directory: URL) async -> Result<HistoryStore, any Error> {
+    Result { try HistoryStore(directory: directory) }
+  }
+
+  private func finishLaunching(with store: HistoryStore) {
     NSApp.mainMenu = AppMenu.make()
     controller = HistoryController(preferences: preferences, store: store)
     panelModel = PanelModel(controller: controller)
