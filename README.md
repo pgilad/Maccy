@@ -6,7 +6,7 @@ A fast, private clipboard manager for macOS 26 and later, built from source. It 
 
 - **Build from source, trust the source.** No third-party Swift packages, no auto-updater, no network access. The app links only Apple system frameworks. Updates are `git pull` and `make install`.
 - **No Xcode needed.** It builds with the Command Line Tools (`xcode-select --install`).
-- **Long history that stays fast.** SQLite with an FTS5 trigram index. Search over 100,000 items takes well under 100 ms in the worst case and under 1 ms for selective queries (`make perf`).
+- **Long history that stays fast.** SQLite with an FTS5 trigram index. Search over 100,000 items takes under 1 ms for selective queries, about 0.1 s for a typical term, and about 0.12 s in the worst case: a full scan for a rare one- or two-letter term or a regex (`make perf`).
 
 ## Features
 

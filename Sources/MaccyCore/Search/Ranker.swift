@@ -90,24 +90,51 @@ enum Ranker {
 }
 
 /// A subsequence matcher in the style of fzf. It is the fallback when no item
-/// contains the query as a substring.
+/// contains the query as a substring. Like the search, it ignores case and diacritics.
 public enum FuzzyMatcher {
   public static func match(_ pattern: String, in candidate: String) -> (score: Double, positions: [Int])? {
-    let needle = Array(pattern.lowercased().filter { !$0.isWhitespace })
+    let needle = pattern.filter { !$0.isWhitespace }.compactMap(SearchFolding.key(of:))
     guard !needle.isEmpty else {
       return nil
     }
     let haystack = Array(candidate)
+    let keys = haystack.map(SearchFolding.key(of:))
+    // A greedy match from the first occurrence of the first letter can miss a better
+    // one later: "gcm" in "debug log: git commit". Try each occurrence. When one
+    // start cannot match, no later start can, so stop there.
+    var best: (score: Double, positions: [Int])?
+    for start in keys.indices where keys[start] == needle[0] {
+      guard let match = greedyMatch(needle, keys: keys, haystack: haystack, from: start) else {
+        break
+      }
+      if match.score > best?.score ?? -.infinity {
+        best = match
+      }
+    }
+    // Reject weak matches: letters spread far apart in a long string.
+    guard let best, best.score >= Double(needle.count) * 2 else {
+      return nil
+    }
+    return best
+  }
+
+  private static func greedyMatch(
+    _ needle: [UInt32],
+    keys: [UInt32?],
+    haystack: [Character],
+    from start: Int
+  ) -> (score: Double, positions: [Int])? {
     var positions: [Int] = []
     positions.reserveCapacity(needle.count)
     var score = 0.0
     var needleIndex = 0
     var previousMatch = -2
 
-    for (index, character) in haystack.enumerated() where needleIndex < needle.count {
-      guard character.lowercased().first == needle[needleIndex] else {
+    for index in start..<haystack.count where needleIndex < needle.count {
+      guard keys[index] == needle[needleIndex] else {
         continue
       }
+      let character = haystack[index]
       var bonus = 1.0
       if index == previousMatch + 1 {
         bonus += 5
@@ -133,10 +160,6 @@ public enum FuzzyMatcher {
     }
     let gaps = Double(last - first + 1 - needle.count)
     score -= gaps * 0.5
-    // Reject weak matches: letters spread far apart in a long string.
-    guard score >= Double(needle.count) * 2 else {
-      return nil
-    }
     return (score, positions)
   }
 

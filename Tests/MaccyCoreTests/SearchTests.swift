@@ -43,10 +43,36 @@ import Testing
     #expect(FuzzyMatcher.match("xyz", in: "git commit") == nil)
   }
 
+  @Test func findsTheBestStartNotTheFirst() throws {
+    let match = try #require(FuzzyMatcher.match("gcm", in: "debug log: git commit"))
+    #expect(match.positions == [11, 15, 17])
+  }
+
+  @Test func ignoresDiacritics() throws {
+    #expect(FuzzyMatcher.match("crmbr", in: "Crème brûlée") != nil)
+    #expect(FuzzyMatcher.match("ÉCLR", in: "ecler") != nil)
+  }
+
   @Test func prefersWordStarts() throws {
     let wordStarts = try #require(FuzzyMatcher.match("pr", in: "pull request"))
     let scattered = try #require(FuzzyMatcher.match("pr", in: "pear"))
     #expect(wordStarts.score > scattered.score)
+  }
+}
+
+@Suite struct SearchFoldingTests {
+  @Test(arguments: [
+    ("Crème brûlée", "creme"), ("CRÈME", "crè"), ("e\u{301}cole", "ecole"), ("Привет МИР", "мир"),
+    ("ёлка", "елка"), ("שָׁלוֹם", "שלום"), ("go build", "GO"), ("İstanbul", "istanbul"), ("aab", "ab"),
+  ])
+  func matchesLikeFoundation(_ text: String, _ needle: String) {
+    #expect(FoldedNeedle(needle).isFound(in: text))
+    #expect(text.range(of: needle, options: SearchFolding.options) != nil)
+  }
+
+  @Test(arguments: [("hello", "xyz"), ("abc", "abd"), ("ab", "abc"), ("עולם", "של")])
+  func rejectsMissingText(_ text: String, _ needle: String) {
+    #expect(!FoldedNeedle(needle).isFound(in: text))
   }
 }
 

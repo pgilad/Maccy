@@ -453,14 +453,15 @@ public actor HistoryStore {
     var conditions: [String] = []
     var bindings: [SQLiteValue] = []
     let ftsTerms = query.terms.filter { $0.count >= 3 }
-    // The trigram index needs at least three characters. Shorter terms use LIKE.
+    // The trigram index needs at least three characters. Shorter terms scan with
+    // maccy_contains, which folds case and diacritics like the index. LIKE folds
+    // ASCII case only, so "ü" did not find "Über".
     for term in query.terms where term.count < 3 {
       conditions.append("""
-        (items.title LIKE ? ESCAPE '\\' OR items.body LIKE ? ESCAPE '\\'
-          OR items.ocr LIKE ? ESCAPE '\\' OR items.app_name LIKE ? ESCAPE '\\')
+        (maccy_contains(items.title, ?) OR maccy_contains(items.body, ?)
+          OR maccy_contains(items.ocr, ?) OR maccy_contains(items.app_name, ?))
         """)
-      let pattern = "%\(escapeLike(term))%"
-      bindings += Array(repeating: .text(pattern), count: 4)
+      bindings += Array(repeating: .text(term), count: 4)
     }
     appendFilters(query, to: &conditions, bindings: &bindings)
 
@@ -593,20 +594,12 @@ public actor HistoryStore {
       bindings.append(.int(kind.rawValue))
     }
     if let app = query.app {
-      conditions.append("(items.app_name LIKE ? ESCAPE '\\' OR items.app_bundle_id LIKE ? ESCAPE '\\')")
-      let pattern = "%\(escapeLike(app))%"
-      bindings += [.text(pattern), .text(pattern)]
+      conditions.append("(maccy_contains(items.app_name, ?) OR maccy_contains(items.app_bundle_id, ?))")
+      bindings += [.text(app), .text(app)]
     }
     if query.pinnedOnly {
       conditions.append("items.pinned_at IS NOT NULL")
     }
-  }
-
-  private func escapeLike(_ string: String) -> String {
-    string
-      .replacingOccurrences(of: "\\", with: "\\\\")
-      .replacingOccurrences(of: "%", with: "\\%")
-      .replacingOccurrences(of: "_", with: "\\_")
   }
 
   public func detail(id: Int64) throws -> ClipDetail? {

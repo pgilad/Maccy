@@ -68,6 +68,20 @@ import Testing
     #expect(hits[0].titleMatches == [0..<2])
   }
 
+  @Test func shortTermsIgnoreCaseAndDiacritics() async throws {
+    let store = try makeStore()
+    try await insert(store, "Über alles")
+    try await insert(store, "café au lait")
+    try await insert(store, "Привет мир")
+    try await insert(store, "plain words", app: "Écrire")
+    #expect(try await store.search(SearchQuery.parse("üB"), limit: 10).hits.map(\.summary.title) == ["Über alles"])
+    #expect(try await store.search(SearchQuery.parse("fe"), limit: 10).hits.map(\.summary.title) == ["café au lait"])
+    #expect(try await store.search(SearchQuery.parse("пр"), limit: 10).hits.map(\.summary.title) == ["Привет мир"])
+    #expect(try await store.search(SearchQuery.parse("app:ecri"), limit: 10).hits.map(\.summary.title) == ["plain words"])
+    // LIKE wildcards are plain text now.
+    #expect(try await store.search(SearchQuery.parse("%"), limit: 10).hits.isEmpty)
+  }
+
   @Test func searchRanksTitleMatchesFirst() async throws {
     let store = try makeStore()
     try await insert(store, "notes about kubectl apply in the body", at: .now)

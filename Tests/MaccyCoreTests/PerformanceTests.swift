@@ -31,7 +31,8 @@ struct PerformanceTests {
 
     for (label, query) in [
       ("recent 300", ""), ("3-char term", "kub"), ("two terms", "docker deploy"),
-      ("rare term", "#99999"), ("short term", "go"), ("app filter", "app:slack invoice"),
+      ("rare term", "#99999"), ("short term", "go"), ("rare short term", "zq"), ("Cyrillic short term", "жё"),
+      ("app filter", "app:slack invoice"),
       ("fuzzy fallback", "zqxv"), ("regex", "/token \\w+ config/"),
     ] {
       clock = .now

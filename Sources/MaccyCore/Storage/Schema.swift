@@ -87,9 +87,53 @@ enum Schema {
   }
 }
 
+func registerFunctions(_ database: SQLiteDatabase) throws {
+  try registerRegexp(database)
+  try registerContains(database)
+}
+
+/// `maccy_contains(text, needle)`: case- and diacritic-insensitive substring match,
+/// like the full-text index. Terms shorter than a trigram and the app filter use it.
+/// The folded needle is cached per statement with `sqlite3_set_auxdata`.
+private func registerContains(_ database: SQLiteDatabase) throws {
+  let result = sqlite3_create_function_v2(
+    database.handle, "maccy_contains", 2, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nil,
+    { context, argc, argv in
+      // Call sqlite3_value_text before sqlite3_value_bytes, as the SQLite documentation asks.
+      guard argc == 2, let argv, let text = sqlite3_value_text(argv[0]) else {
+        sqlite3_result_int(context, 0)
+        return
+      }
+      let textBytes = UnsafeBufferPointer(start: text, count: Int(sqlite3_value_bytes(argv[0])))
+      let needle: FoldedNeedle
+      if let cached = sqlite3_get_auxdata(context, 1) {
+        needle = Unmanaged<FoldedNeedle>.fromOpaque(cached).takeUnretainedValue()
+      } else if let needleText = sqlite3_value_text(argv[1]) {
+        let needleBytes = UnsafeBufferPointer(start: needleText, count: Int(sqlite3_value_bytes(argv[1])))
+        // Never fails, like Row.string: invalid UTF-8 becomes U+FFFD.
+        // swiftlint:disable:next optional_data_string_conversion
+        needle = FoldedNeedle(String(decoding: needleBytes, as: UTF8.self))
+        sqlite3_set_auxdata(context, 1, Unmanaged.passRetained(needle).toOpaque()) { pointer in
+          if let pointer {
+            Unmanaged<FoldedNeedle>.fromOpaque(pointer).release()
+          }
+        }
+      } else {
+        sqlite3_result_int(context, 0)
+        return
+      }
+      sqlite3_result_int(context, needle.isFound(in: textBytes) ? 1 : 0)
+    },
+    nil, nil, nil
+  )
+  guard result == SQLITE_OK else {
+    throw database.error(result)
+  }
+}
+
 /// `maccy_regexp(pattern, text)`: case-insensitive regular expression match.
 /// The compiled expression is cached per statement with `sqlite3_set_auxdata`.
-func registerFunctions(_ database: SQLiteDatabase) throws {
+private func registerRegexp(_ database: SQLiteDatabase) throws {
   let result = sqlite3_create_function_v2(
     database.handle, "maccy_regexp", 2, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nil,
     { context, argc, argv in
