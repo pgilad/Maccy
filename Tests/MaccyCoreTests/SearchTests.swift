@@ -80,6 +80,10 @@ import Testing
     #expect(match.positions == [11, 15, 17])
   }
 
+  @Test func foldsFullWidthLetters() {
+    #expect(FuzzyMatcher.match("ａｂｃ", in: "ＡＢＣ Report") != nil)
+  }
+
   @Test func ignoresDiacritics() throws {
     #expect(FuzzyMatcher.match("crmbr", in: "Crème brûlée") != nil)
     #expect(FuzzyMatcher.match("ÉCLR", in: "ecler") != nil)
@@ -96,6 +100,7 @@ import Testing
   @Test(arguments: [
     ("Crème brûlée", "creme"), ("CRÈME", "crè"), ("e\u{301}cole", "ecole"), ("Привет МИР", "мир"),
     ("ёлка", "елка"), ("שָׁלוֹם", "שלום"), ("go build", "GO"), ("İstanbul", "istanbul"), ("aab", "ab"),
+    ("ＡＢＣ Report", "ａｂｃ"), ("한국어 텍스트", "국어"),
   ])
   func matchesLikeFoundation(_ text: String, _ needle: String) {
     #expect(FoldedNeedle(needle).isFound(in: text))

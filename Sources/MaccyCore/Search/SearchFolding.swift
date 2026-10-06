@@ -9,9 +9,10 @@ import Foundation
 enum SearchFolding {
   static let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
 
-  /// The table covers U+0000..<U+3000: Latin, Greek, Cyrillic, Hebrew, Arabic and
-  /// the combining marks. Scalars above it (CJK, emoji) have no case and stay as they are.
-  private static let tableSize: UInt32 = 0x3000
+  /// The table covers the Basic Multilingual Plane (U+0000..<U+10000): all scripts in
+  /// common use, full-width Latin and the combining marks. It is 256 KB and takes 20 ms
+  /// to build, once. Scalars above it (emoji, historic scripts) stay as they are.
+  private static let tableSize: UInt32 = 0x1_0000
   private static let dropped: UInt32 = .max
   private static let multipleFlag: UInt32 = 0x8000_0000
 
