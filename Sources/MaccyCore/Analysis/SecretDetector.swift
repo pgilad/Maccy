@@ -62,9 +62,13 @@ public struct IgnorePatterns: Sendable {
     case timedOut
   }
 
-  /// The time for all patterns together, for one copy. The check runs on the
-  /// capture queue, so a slow pattern must not delay the copies after it.
-  public static let timeLimit: Duration = .milliseconds(250)
+  /// The time for all patterns together, for one copy: 0.25 s, plus 0.15 s for each
+  /// million characters. The check runs on the capture queue, so a slow pattern must
+  /// not delay the copies after it. A simple pattern scans about 1 MB in 30 ms, so a
+  /// linear scan of the largest text (20 MB) has five times the time it needs.
+  public static func timeLimit(forLength length: Int) -> Duration {
+    .milliseconds(250) + .milliseconds(150) * (Double(length) / 1_000_000)
+  }
 
   private let regexes: [NSRegularExpression]
   public let invalidPatterns: [String]
@@ -86,9 +90,9 @@ public struct IgnorePatterns: Sendable {
   public var isEmpty: Bool { regexes.isEmpty }
 
   /// An invalid pattern does not stop the check of the other patterns.
-  public func evaluate(_ text: String, timeLimit: Duration = Self.timeLimit) -> Verdict {
+  public func evaluate(_ text: String, timeLimit: Duration? = nil) -> Verdict {
     let range = NSRange(text.startIndex..., in: text)
-    let deadline = ContinuousClock.now + timeLimit
+    let deadline = ContinuousClock.now + (timeLimit ?? Self.timeLimit(forLength: range.length))
     for regex in regexes {
       var found = false
       var timedOut = false

@@ -251,6 +251,13 @@ import UniformTypeIdentifiers
     #expect(ContinuousClock.now - start < .seconds(2))
     #expect(patterns.evaluate("my password", timeLimit: .milliseconds(50)) == .match)
   }
+
+  @Test func simpleIgnorePatternChecksALargeCopy() {
+    // A fixed 0.25 s limit dropped copies over about 9 MB, even for a linear pattern.
+    let text = String(repeating: "a log line with no secret in it\n", count: 320_000)
+    #expect(text.utf16.count > 10_000_000)
+    #expect(IgnorePatterns(["password"]).evaluate(text) == .noMatch)
+  }
 }
 
 @Suite struct ImageProcessingTests {
