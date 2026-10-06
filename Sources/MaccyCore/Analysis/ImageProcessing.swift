@@ -55,11 +55,18 @@ public enum ImageProcessing {
           let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
           let width = properties[kCGImagePropertyPixelWidth] as? Int,
           let height = properties[kCGImagePropertyPixelHeight] as? Int,
-          width.multipliedReportingOverflow(by: height).partialValue <= maxPixelCount,
+          isWithinPixelLimit(width: width, height: height, maxPixelCount: maxPixelCount),
           let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
       return nil
     }
     return encode(image, as: .png)
+  }
+
+  /// A crafted header can give sizes whose product overflows `Int` and wraps to a
+  /// negative number, which would pass a plain `<=` check.
+  static func isWithinPixelLimit(width: Int, height: Int, maxPixelCount: Int) -> Bool {
+    let (pixels, overflow) = width.multipliedReportingOverflow(by: height)
+    return width > 0 && height > 0 && !overflow && pixels <= maxPixelCount
   }
 
   public static func tiffData(from data: Data) -> Data? {

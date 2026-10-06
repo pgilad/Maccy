@@ -94,6 +94,14 @@ import UniformTypeIdentifiers
     #expect(ImageProcessing.typeIdentifier(of: png) == PasteboardTypes.png)
   }
 
+  @Test func pixelLimitRejectsOverflowAndBadSizes() {
+    #expect(ImageProcessing.isWithinPixelLimit(width: 5_000, height: 5_000, maxPixelCount: 25_000_000))
+    #expect(!ImageProcessing.isWithinPixelLimit(width: 5_001, height: 5_000, maxPixelCount: 25_000_000))
+    // The product wraps to a negative number.
+    #expect(!ImageProcessing.isWithinPixelLimit(width: 3_037_000_500, height: 3_037_000_500, maxPixelCount: .max))
+    #expect(!ImageProcessing.isWithinPixelLimit(width: -1, height: 10, maxPixelCount: .max))
+  }
+
   @Test func imageWithRealTextIsText() throws {
     let clip = try #require(ClipAnalyzer.analyze(CapturedClip(representations: [
       Representation(type: PasteboardTypes.string, data: Data("A paragraph with a picture".utf8)),
