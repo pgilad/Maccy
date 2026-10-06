@@ -3,9 +3,32 @@ import Foundation
 import UniformTypeIdentifiers
 @testable import MaccyCore
 
+private let testFolderPrefix = "MaccyCoreTests-"
+
+/// One folder for each test process, deleted at exit. A run that crashed or was
+/// stopped leaves its folder, so each run also deletes folders older than an hour.
+/// Before, each test left a folder: 677 folders and 3.2 GB after some weeks.
+private let testRoot: URL = {
+  let temporary = FileManager.default.temporaryDirectory
+  let staleDate = Date.now.addingTimeInterval(-3_600)
+  let entries = (try? FileManager.default.contentsOfDirectory(
+    at: temporary, includingPropertiesForKeys: [.contentModificationDateKey]
+  )) ?? []
+  for entry in entries where entry.lastPathComponent.hasPrefix(testFolderPrefix) {
+    let modified = (try? entry.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+    if let modified, modified < staleDate {
+      try? FileManager.default.removeItem(at: entry)
+    }
+  }
+  atexit {
+    let root = FileManager.default.temporaryDirectory.appending(path: "MaccyCoreTests-\(getpid())")
+    try? FileManager.default.removeItem(at: root)
+  }
+  return temporary.appending(path: testFolderPrefix + "\(getpid())", directoryHint: .isDirectory)
+}()
+
 func makeTemporaryDirectory() -> URL {
-  let url = FileManager.default.temporaryDirectory
-    .appending(path: "MaccyCoreTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+  let url = testRoot.appending(path: UUID().uuidString, directoryHint: .isDirectory)
   try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
   return url
 }

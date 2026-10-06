@@ -352,17 +352,19 @@ import Testing
     let store = try makeStore()
     let filler = String(repeating: "abcdefghij ", count: 9_000)
     try await store.upsert(batch: (0..<300).map { analyzed("\($0) \(filler)") })
-    let start = ContinuousClock.now
     let task = Task {
       try await store.search(SearchQuery.parse("/(a|b|c)+zzz$/"), limit: 10)
     }
-    // Cancel while the query runs, not before it starts.
+    // Usually the query runs by now. If not, it stops at its first cancellation check.
     try await Task.sleep(for: .milliseconds(150))
+    let cancelledAt = ContinuousClock.now
     task.cancel()
+    // A search that ends without a cancellation check returns hits and does not throw.
     await #expect(throws: (any Error).self) {
       try await task.value
     }
-    // The full scan takes several seconds. A cancelled one stops early.
-    #expect(ContinuousClock.now - start < .seconds(1))
+    // The full scan takes several seconds. Time from the cancel, not from the start,
+    // so a slow start on a busy machine (tests run in parallel) does not count.
+    #expect(ContinuousClock.now - cancelledAt < .seconds(2))
   }
 }

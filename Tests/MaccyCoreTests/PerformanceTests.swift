@@ -2,7 +2,8 @@ import Foundation
 import Testing
 @testable import MaccyCore
 
-/// Run with `MACCY_PERF=1 make test` to measure search on a large history.
+/// Run with `make perf` to measure search on a large history. The limits are about
+/// four times the times on an M-series Mac, so they catch a large slowdown.
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["MACCY_PERF"] == "1"))
 struct PerformanceTests {
   static let words = """
@@ -27,7 +28,9 @@ struct PerformanceTests {
       }
       try await store.upsert(batch: batch)
     }
-    print("insert \(count): \(ContinuousClock.now - clock)")
+    let insertTime = ContinuousClock.now - clock
+    print("insert \(count): \(insertTime)")
+    #expect(insertTime < .seconds(60))
 
     for (label, query) in [
       ("recent 300", ""), ("3-char term", "kub"), ("two terms", "docker deploy"),
@@ -42,7 +45,9 @@ struct PerformanceTests {
       } else {
         hits = try await store.search(SearchQuery.parse(query), limit: 300).hits.count
       }
-      print("\(label) (\(query)): \(hits) hits in \(ContinuousClock.now - clock)")
+      let time = ContinuousClock.now - clock
+      print("\(label) (\(query)): \(hits) hits in \(time)")
+      #expect(time < .milliseconds(500), "\(label) took \(time)")
     }
     let stats = try await store.stats()
     print("items: \(stats.itemCount), disk: \(stats.diskBytes / 1_048_576) MB")
