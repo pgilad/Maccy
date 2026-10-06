@@ -137,6 +137,7 @@ final class SelfTest {
     await copy(to: pasteboard, controller: controller) { $0.setString(Diagnostics.fakeAWSKey, forType: .string) }
     recent = (try? await store.recent(limit: 10)) ?? []
     check(recent.first?.isSensitive == true && recent.first?.expiresAt != nil, "secret is marked and expires")
+    check(controller.latestTitle == HistoryController.hiddenTitle, "the menu bar title hides a secret")
     preferences.secretPolicy = .dontSave
     controller.monitor.update(rules: CaptureRules(preferences: preferences))
     let beforeSecret = await count(store)

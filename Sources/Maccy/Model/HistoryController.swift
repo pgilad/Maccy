@@ -16,8 +16,10 @@ final class HistoryController {
 
   /// Increments after each change to the stored history. Views refresh on change.
   private(set) var revision = 0
-  /// The title of the most recent item, for the menu bar.
+  /// The title of the most recent item, for the menu bar. Masked for a secret.
   private(set) var latestTitle: String?
+  /// The menu bar is visible in screen shares and screenshots, so it never shows a secret.
+  static let hiddenTitle = "••••••"
   /// A short message for the panel footer.
   var toast: String?
 
@@ -77,6 +79,7 @@ final class HistoryController {
   struct IngestOutcome: Sendable {
     var result: UpsertResult
     var title: String
+    var isSensitive: Bool
     var capturedAt: Date
     var expiresAt: Date?
     var imageForOCR: Data?
@@ -101,6 +104,7 @@ final class HistoryController {
       return IngestOutcome(
         result: result,
         title: analyzed.title,
+        isSensitive: analyzed.detectedSecret != nil,
         capturedAt: analyzed.capturedAt,
         expiresAt: expiresAt,
         imageForOCR: wantsOCR ? analyzed.primaryImage : nil
@@ -122,7 +126,7 @@ final class HistoryController {
     // Ingest tasks can finish out of order. Keep the title of the newest copy.
     if outcome.capturedAt >= latestCaptureDate {
       latestCaptureDate = outcome.capturedAt
-      latestTitle = outcome.title
+      latestTitle = outcome.isSensitive ? Self.hiddenTitle : outcome.title
     }
     revision += 1
     if outcome.expiresAt != nil {
@@ -168,7 +172,7 @@ final class HistoryController {
   }
 
   private func refreshLatestTitle() async {
-    latestTitle = (try? await store.latestUnpinned())?.title
+    latestTitle = (try? await store.latestUnpinned()).map { $0.isSensitive ? Self.hiddenTitle : $0.title }
   }
 
   // MARK: - Actions
