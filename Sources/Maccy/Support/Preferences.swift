@@ -280,17 +280,18 @@ final class Preferences {
 
   // All pause and resume paths use these methods. Each one sets all three keys, so a
   // "skip next copy" flag that is left over cannot turn a later pause into one skip.
-  // The capture queue reads the keys at any time, so the order of the writes matters.
+  // The capture queue reads the keys at any time, so a pause writes its new pause
+  // key before it clears the old one: no copy between two writes is saved.
 
   /// Pauses capture until `resume()`, or until `date`.
   func pause(until date: Date? = nil) {
     ignoreOnlyNextEvent = false
     if let date {
-      ignoreEvents = false
       pauseUntil = date
+      ignoreEvents = false
     } else {
-      pauseUntil = nil
       ignoreEvents = true
+      pauseUntil = nil
     }
   }
 
