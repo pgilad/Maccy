@@ -28,10 +28,10 @@ struct GeneralSettings: View {
         )
         PermissionRow(
           title: "Pasteboard access",
-          detail: "Set Maccy to always allow pasteboard access in Privacy & Security, if macOS asks.",
+          detail: "If macOS asks, set Maccy to Always in Paste from Other Apps, then restart Maccy.",
           isGranted: !Permissions.pasteboardAccessNeedsAttention,
           status: pasteboardAccess,
-          action: Permissions.openPrivacySettings
+          action: Permissions.openPasteboardSettings
         )
       }
 

@@ -37,8 +37,9 @@ enum Permissions {
     open("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
   }
 
-  static func openPrivacySettings() {
-    open("x-apple.systempreferences:com.apple.preference.security")
+  /// Opens Privacy & Security › Paste from Other Apps.
+  static func openPasteboardSettings() {
+    open("x-apple.systempreferences:com.apple.preference.security?Privacy_Pasteboard")
   }
 
   private static func open(_ string: String) {
