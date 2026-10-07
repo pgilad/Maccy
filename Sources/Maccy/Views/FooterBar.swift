@@ -31,6 +31,24 @@ struct FooterBar: View {
         .font(.caption)
         .foregroundStyle(.secondary)
         .lineLimit(1)
+    } else if Permissions.pasteboardAccessNeedsAttention {
+      // "Deny" stops the history. "Ask" shows a system alert at each copy.
+      let isDenied = Permissions.pasteboardAccess == .alwaysDeny
+      Button {
+        Permissions.openPasteboardSettings()
+      } label: {
+        Label(
+          isDenied ? "Allow Paste from Other Apps to save copies" : "Set Paste from Other Apps to Always",
+          systemImage: "exclamationmark.triangle.fill"
+        )
+        .font(.caption)
+        .foregroundStyle(.orange)
+      }
+      .buttonStyle(.plain)
+      .help(
+        (isDenied ? "macOS does not let Maccy read what you copy in other apps. " : "macOS asks before Maccy reads each copy. ")
+          + "Set Maccy to Always in Privacy & Security › Paste from Other Apps, then restart Maccy."
+      )
     } else if preferences.pasteAutomatically && !Paster.isTrusted {
       Button {
         Permissions.openAccessibilitySettings()

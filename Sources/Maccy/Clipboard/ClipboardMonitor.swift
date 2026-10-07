@@ -98,6 +98,11 @@ nonisolated final class ClipboardMonitor: Sendable {
     guard let isOwnChange, !isOwnChange else {
       return
     }
+    // With "Deny" in Paste from Other Apps, macOS gives no content from other apps
+    // and shows no alert, so do not read. The panel footer tells the user.
+    guard pasteboard.accessBehavior != .alwaysDeny else {
+      return
+    }
 
     let rules = self.rules.withLock { $0 }
     // Cheap checks first. Only a real candidate may use up "skip next copy",
