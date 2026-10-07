@@ -82,7 +82,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
   @objc private func click() {
     let event = NSApp.currentEvent
-    let modifiers = event?.modifierFlags.intersection(.deviceIndependentFlagsMask) ?? []
+    // macOS 27 can send the action without the modifier keys of the click. Add the keys that are down now.
+    let modifiers = (event?.modifierFlags ?? []).union(NSEvent.modifierFlags).intersection(.deviceIndependentFlagsMask)
     if event?.type == .rightMouseUp || modifiers.contains(.control) {
       showMenu()
     } else if modifiers.contains(.option) {
