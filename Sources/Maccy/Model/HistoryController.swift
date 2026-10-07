@@ -227,7 +227,7 @@ final class HistoryController {
       // The copy succeeded, but the paste needs Accessibility. Keep the panel open, so
       // the message shows: after the close, the next open clears it. The first time,
       // the system prompt explains the problem (it takes the focus and closes the panel).
-      toast = "Copied. Allow Accessibility access to paste automatically."
+      toast = "Copied. To paste, allow Maccy in \(Permissions.accessibilityName)."
       if !didRequestAccess {
         didRequestAccess = true
         Paster.requestAccess()

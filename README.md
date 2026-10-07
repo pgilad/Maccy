@@ -24,7 +24,7 @@ Maccy keeps everything you copy and brings it back in a few keystrokes. This for
 
 ## Install
 
-Requires macOS 26 or later on Apple silicon. On first start, grant **Accessibility** so Maccy can paste into other apps.
+Requires macOS 26 or later on Apple silicon. On first start, grant **Accessibility** (on macOS 27: **Device Control and Data Access**) so Maccy can paste into other apps.
 
 ### Download
 

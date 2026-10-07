@@ -17,7 +17,7 @@ struct GeneralSettings: View {
     Form {
       Section("Permissions") {
         PermissionRow(
-          title: "Accessibility",
+          title: Permissions.accessibilityName,
           detail: "Needed to paste into other apps. Without it, Maccy copies, and you press ⌘V.",
           isGranted: accessibility,
           status: accessibility ? "Allowed" : "Not allowed",

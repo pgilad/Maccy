@@ -35,12 +35,12 @@ struct FooterBar: View {
       Button {
         Permissions.openAccessibilitySettings()
       } label: {
-        Label("Allow Accessibility to paste", systemImage: "exclamationmark.triangle.fill")
+        Label("Allow \(Permissions.accessibilityName) to paste", systemImage: "exclamationmark.triangle.fill")
           .font(.caption)
           .foregroundStyle(.orange)
       }
       .buttonStyle(.plain)
-      .help("Without Accessibility access, Maccy copies the item, and you press ⌘V.")
+      .help("Without this permission, Maccy copies the item, and you press ⌘V.")
     } else if preferences.isPaused {
       Button {
         model.togglePause()

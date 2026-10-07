@@ -5,6 +5,16 @@ enum Permissions {
   /// Needed to send ⌘V to other apps.
   static var accessibilityGranted: Bool { Paster.isTrusted }
 
+  /// The name of that permission in System Settings › Privacy & Security.
+  /// macOS 27 renamed the Accessibility pane. The API and the deep link did not change.
+  static var accessibilityName: String {
+    if #available(macOS 27, *) {
+      "Device Control and Data Access"
+    } else {
+      "Accessibility"
+    }
+  }
+
   /// macOS 15.4 and later can ask the user before an app reads the pasteboard.
   /// A clipboard manager needs "always allow".
   static var pasteboardAccess: NSPasteboard.AccessBehavior { NSPasteboard.general.accessBehavior }
