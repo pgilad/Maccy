@@ -36,8 +36,9 @@ final class SettingsWindowController {
       self.window = window
     }
     // Maccy is a menu bar app (no Dock icon), so it must activate to show a normal window.
-    NSApp.activate()
-    window?.makeKeyAndOrderFront(nil)
+    if let window {
+      NSApp.showInFront(window, name: "Settings")
+    }
   }
 
   static func makeWindow(

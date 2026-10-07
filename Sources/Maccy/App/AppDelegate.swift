@@ -104,7 +104,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   @objc func showAbout(_ sender: Any?) {
     panel.close()
-    NSApp.activate()
     var options: [NSApplication.AboutPanelOptionKey: Any] = [:]
     // The app is built from source, so show which commit is running.
     if let commit = Bundle.main.object(forInfoDictionaryKey: "MaccyGitCommit") as? String {
@@ -117,6 +116,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       ])
     }
     NSApp.orderFrontStandardAboutPanel(options: options)
+    if let about = NSApp.aboutPanel {
+      NSApp.showInFront(about, name: "About")
+    } else {
+      NSApp.activate()
+    }
   }
 
   @objc func checkForUpdates(_ sender: Any?) {
@@ -208,6 +212,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 extension NSApplication {
+  /// Shows a Maccy window in front of the app that the user works in. `activate()` is
+  /// only a request: after a click in the menu bar menu, macOS can keep the other app
+  /// active. A window ordered front while Maccy is not active goes behind the windows
+  /// of that app, so the click seems to do nothing. `orderFrontRegardless()` puts it on
+  /// top anyway. It becomes key when Maccy becomes active, or when the user clicks it.
+  func showInFront(_ window: NSWindow, name: String) {
+    let wasActive = isActive
+    activate()
+    window.makeKeyAndOrderFront(nil)
+    if !isActive {
+      window.orderFrontRegardless()
+    }
+    Log.app.notice("Showed \(name, privacy: .public): app active before: \(wasActive), now: \(self.isActive)")
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+      Log.app.notice("\(name, privacy: .public) one second later: app active: \(self.isActive), window key: \(window.isKeyWindow)")
+    }
+  }
+
+  /// The panel of `orderFrontStandardAboutPanel`: the only visible panel at the normal
+  /// level. (The Maccy panel floats higher, and alerts are at the modal panel level.)
+  var aboutPanel: NSWindow? {
+    windows.first { $0 is NSPanel && $0.isVisible && $0.level == .normal }
+  }
+
   /// Maccy activates to show Settings, the About panel, an alert or a save panel.
   /// When the last of them closes, the app that the user worked in gets the focus
   /// back. Without this, Maccy stays active with no window and its menus in the menu bar.

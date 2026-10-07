@@ -272,6 +272,11 @@ final class SelfTest {
     // 15. Menus: About in the app menu, and the global shortcut as a menu key equivalent.
     let appMenu = AppMenu.make().items.first?.submenu
     check(appMenu?.items.first?.action == #selector(AppDelegate.showAbout(_:)), "app menu starts with About Maccy")
+    // showAbout finds the About panel to put it in front. Check that macOS still makes it that way.
+    NSApp.orderFrontStandardAboutPanel(nil)
+    let about = NSApp.aboutPanel
+    about?.orderOut(nil)
+    check(about != nil, "the About panel is found, to show it in front")
     check(appMenu?.items.dropFirst().first?.action == #selector(AppDelegate.checkForUpdates(_:)), "Check for Updates follows About")
     check(Preferences(defaults: defaults).checkForUpdates, "automatic update checks are on by default")
     check(KeyCombo(keyCode: UInt16(kVK_F5), modifiers: .option).menuKeyEquivalent == String(Character(NSEvent.SpecialKey.f5.unicodeScalar)),
