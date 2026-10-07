@@ -13,7 +13,7 @@ let package = Package(
     .executable(name: "Maccy", targets: ["Maccy"])
   ],
   targets: [
-    // Storage, analysis, search and retention. No UI, fully unit-tested.
+    // Storage, analysis, search, retention and release versions. No UI, fully unit-tested.
     .target(
       name: "MaccyCore",
       swiftSettings: concurrencySettings,
