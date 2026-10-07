@@ -203,9 +203,9 @@ final class Preferences {
   var didShowOnboarding: Bool { didSet { defaults.set(didShowOnboarding, forKey: Key.didShowOnboarding) } }
   /// The last tab of the Settings window.
   var settingsTab: Int { didSet { defaults.set(settingsTab, forKey: Key.settingsTab) } }
-  /// Ask GitHub once a day for a new release. Off by default: without it, Maccy makes no network request.
+  /// Ask GitHub once a day for a new release. On by default. Settings › Advanced turns it off.
   var checkForUpdates: Bool { didSet { defaults.set(checkForUpdates, forKey: Key.checkForUpdates) } }
-  /// The time of the last update check, automatic or not.
+  /// The time of the last successful update check, automatic or not.
   var lastUpdateCheck: Date? { didSet { defaults.set(lastUpdateCheck?.timeIntervalSince1970, forKey: Key.lastUpdateCheck) } }
 
   /// Capture is paused. Other processes can change this key, see `refreshPauseState()`.
@@ -243,7 +243,7 @@ final class Preferences {
       Key.windowHeight: 500.0,
       Key.windowAnchorX: 0.5,
       Key.windowAnchorY: 0.75,
-      Key.checkForUpdates: false,
+      Key.checkForUpdates: true,
     ])
 
     hotKey = defaults.data(forKey: Key.hotKey).map { try? JSONDecoder().decode(KeyCombo.self, from: $0) }

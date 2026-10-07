@@ -55,8 +55,15 @@ final class UpdateChecker {
       return
     }
     state = .checking
-    preferences.lastUpdateCheck = .now
     state = await Self.fetchState(current: currentVersion)
+    // Only a check that got an answer counts. After a failure (for example no network
+    // just after login), the automatic check tries again at the next hourly look.
+    switch state {
+    case .upToDate, .available:
+      preferences.lastUpdateCheck = .now
+    case .idle, .checking, .failed:
+      break
+    }
     if showingResult {
       showResult()
     }

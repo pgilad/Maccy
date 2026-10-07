@@ -273,7 +273,7 @@ final class SelfTest {
     let appMenu = AppMenu.make().items.first?.submenu
     check(appMenu?.items.first?.action == #selector(AppDelegate.showAbout(_:)), "app menu starts with About Maccy")
     check(appMenu?.items.dropFirst().first?.action == #selector(AppDelegate.checkForUpdates(_:)), "Check for Updates follows About")
-    check(!Preferences(defaults: defaults).checkForUpdates, "automatic update checks are off by default")
+    check(Preferences(defaults: defaults).checkForUpdates, "automatic update checks are on by default")
     check(KeyCombo(keyCode: UInt16(kVK_F5), modifiers: .option).menuKeyEquivalent == String(Character(NSEvent.SpecialKey.f5.unicodeScalar)),
           "a function-key shortcut becomes a menu key equivalent")
 

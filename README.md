@@ -77,7 +77,7 @@ Settings can swap <kbd>↩</kbd> and <kbd>⌘↩</kbd>. If the shortcut does not
 
 ## Privacy
 
-- No telemetry and no auto-updater. The only network request is the update check: Maccy asks the GitHub API for the latest release when you choose **Check for Updates…**, or once a day if you turn on automatic checks (off by default). The app links only Apple frameworks.
+- No telemetry and no auto-updater. The only network request is the update check: once a day, and when you choose **Check for Updates…**, Maccy asks the GitHub API for the latest release. It sends nothing about you or your history. To turn off the daily check, go to **Settings → Advanced**. The app links only Apple frameworks.
 - Copies that password managers mark as concealed are never read, and password managers are ignored by default.
 - Copies that look like API keys, tokens or private keys are deleted after 15 minutes, or not saved at all.
 - Nothing you copy goes to logs or notifications.

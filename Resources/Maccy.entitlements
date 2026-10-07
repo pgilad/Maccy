@@ -9,8 +9,8 @@
 	<!-- "Save Image…" and "Add App…" use the system open and save panels. -->
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
-	<!-- The update check asks api.github.com for the latest release: only when the user
-	     chooses Check for Updates, or once a day with automatic checks on (off by default). -->
+	<!-- The update check asks api.github.com for the latest release: once a day (on by
+	     default, Settings › Advanced turns it off), and when the user chooses Check for Updates. -->
 	<key>com.apple.security.network.client</key>
 	<true/>
 </dict>
