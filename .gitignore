@@ -1,6 +1,4 @@
 .build/
 build/
 .swiftpm/
-xcuserdata/
-.idea/
 .DS_Store

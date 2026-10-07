@@ -73,7 +73,7 @@ To update, run `git pull` and `make install`.
 | <kbd>⌘K</kbd> | All actions, with their shortcuts |
 | <kbd>⎋</kbd> | Clear the search, then close |
 
-Settings can swap <kbd>↩</kbd> and <kbd>⌘↩</kbd>. If the shortcut does not work in a password field, see [this note](docs/keyboard-shortcut-password-fields.md).
+Settings can swap <kbd>↩</kbd> and <kbd>⌘↩</kbd>. In a password field, macOS can block a shortcut that types a character, such as <kbd>⌥C</kbd> (ç). Use a shortcut with <kbd>⌘</kbd> or <kbd>⌃</kbd>.
 
 ## Privacy
 
