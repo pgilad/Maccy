@@ -133,8 +133,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       menu.addItem(withTitle: "Skip Next Copy", action: #selector(skipNext), keyEquivalent: "").target = self
     }
     menu.addItem(.separator())
-    // macOS adds icons to Settings and Quit, and to About only with the standard
+    // macOS 26 adds icons to Settings and Quit, and to About only with the standard
     // About action. Without an icon, About is indented to align with Settings.
+    // macOS 27 decides if menu item images show, and usually hides them. Maccy follows it.
     let about = menu.addItem(withTitle: "About Maccy", action: #selector(openAbout), keyEquivalent: "")
     about.target = self
     about.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)

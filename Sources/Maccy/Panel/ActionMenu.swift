@@ -2,6 +2,7 @@ import AppKit
 
 /// The actions (⌘K) as a native menu: sections, icons and key equivalents,
 /// with the standard menu keyboard behavior (↑ ↓, ↩, ⎋, type to select).
+/// macOS 27 usually hides the icons. Maccy keeps the system default.
 enum ActionMenu {
   static func make(_ actions: [ClipAction]) -> NSMenu {
     let menu = NSMenu(title: "Actions")
