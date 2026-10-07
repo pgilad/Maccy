@@ -147,6 +147,8 @@ final class Preferences {
     static let windowAnchorY = "windowAnchorY"
     static let didShowOnboarding = "didShowOnboarding"
     static let settingsTab = "settingsTab"
+    static let checkForUpdates = "checkForUpdates"
+    static let lastUpdateCheck = "lastUpdateCheck"
     // The names below match upstream Maccy, so `defaults write <bundle id> ignoreEvents true` still works.
     static let ignoreEvents = "ignoreEvents"
     static let ignoreOnlyNextEvent = "ignoreOnlyNextEvent"
@@ -201,6 +203,10 @@ final class Preferences {
   var didShowOnboarding: Bool { didSet { defaults.set(didShowOnboarding, forKey: Key.didShowOnboarding) } }
   /// The last tab of the Settings window.
   var settingsTab: Int { didSet { defaults.set(settingsTab, forKey: Key.settingsTab) } }
+  /// Ask GitHub once a day for a new release. Off by default: without it, Maccy makes no network request.
+  var checkForUpdates: Bool { didSet { defaults.set(checkForUpdates, forKey: Key.checkForUpdates) } }
+  /// The time of the last update check, automatic or not.
+  var lastUpdateCheck: Date? { didSet { defaults.set(lastUpdateCheck?.timeIntervalSince1970, forKey: Key.lastUpdateCheck) } }
 
   /// Capture is paused. Other processes can change this key, see `refreshPauseState()`.
   var ignoreEvents: Bool { didSet { defaults.set(ignoreEvents, forKey: Key.ignoreEvents) } }
@@ -237,6 +243,7 @@ final class Preferences {
       Key.windowHeight: 500.0,
       Key.windowAnchorX: 0.5,
       Key.windowAnchorY: 0.75,
+      Key.checkForUpdates: false,
     ])
 
     hotKey = defaults.data(forKey: Key.hotKey).map { try? JSONDecoder().decode(KeyCombo.self, from: $0) }
@@ -268,6 +275,9 @@ final class Preferences {
     windowAnchor = CGPoint(x: defaults.double(forKey: Key.windowAnchorX), y: defaults.double(forKey: Key.windowAnchorY))
     didShowOnboarding = defaults.bool(forKey: Key.didShowOnboarding)
     settingsTab = defaults.integer(forKey: Key.settingsTab)
+    checkForUpdates = defaults.bool(forKey: Key.checkForUpdates)
+    let lastCheckTimestamp = defaults.double(forKey: Key.lastUpdateCheck)
+    lastUpdateCheck = lastCheckTimestamp > 0 ? Date(timeIntervalSince1970: lastCheckTimestamp) : nil
     ignoreEvents = defaults.bool(forKey: Key.ignoreEvents)
     ignoreOnlyNextEvent = defaults.bool(forKey: Key.ignoreOnlyNextEvent)
     let pauseTimestamp = defaults.double(forKey: Key.pauseUntil)

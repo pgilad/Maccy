@@ -10,6 +10,7 @@ enum AppMenu {
     let appMenu = NSMenu(title: "Maccy")
     // Sent up the responder chain to the app delegate, so they work in any Maccy window.
     appMenu.addItem(withTitle: "About Maccy", action: #selector(AppDelegate.showAbout(_:)), keyEquivalent: "")
+    appMenu.addItem(withTitle: "Check for Updates…", action: #selector(AppDelegate.checkForUpdates(_:)), keyEquivalent: "")
     appMenu.addItem(.separator())
     appMenu.addItem(withTitle: "Settings…", action: #selector(AppDelegate.showSettings(_:)), keyEquivalent: ",")
     appMenu.addItem(.separator())

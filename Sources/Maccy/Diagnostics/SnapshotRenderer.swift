@@ -62,8 +62,12 @@ enum SnapshotRenderer {
 
     // Settings use AppKit-backed controls and a toolbar. Draw the real window
     // (frame view included) offscreen, which ImageRenderer cannot do.
+    // Not started: the snapshots make no network request.
+    let updateChecker = UpdateChecker(preferences: preferences)
     for (index, name) in ["general", "history", "privacy", "advanced"].enumerated() {
-      let window = SettingsWindowController.makeWindow(preferences: preferences, controller: controller, selectedTab: index)
+      let window = SettingsWindowController.makeWindow(
+        preferences: preferences, controller: controller, updateChecker: updateChecker, selectedTab: index
+      )
       ok = await saveWindowSnapshot(window, to: directory.appending(path: "settings-\(name).png")) && ok
     }
     print(ok ? "Snapshots written to \(directory.path)" : "Some snapshots failed")

@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private var panel: PanelController!
   private var statusItem: StatusItemController!
   private var settings: SettingsWindowController!
+  private var updateChecker: UpdateChecker!
   private var pauseObserver: DefaultsObserver?
   private var observationTasks: [Task<Void, Never>] = []
 
@@ -40,13 +41,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     controller = HistoryController(preferences: preferences, store: store)
     panelModel = PanelModel(controller: controller)
     panel = PanelController(model: panelModel, preferences: preferences)
-    settings = SettingsWindowController(preferences: preferences, controller: controller)
+    updateChecker = UpdateChecker(preferences: preferences)
+    panelModel.updateChecker = updateChecker
+    settings = SettingsWindowController(preferences: preferences, controller: controller, updateChecker: updateChecker)
     statusItem = StatusItemController(
       preferences: preferences,
       controller: controller,
       onToggle: { [weak self] in self?.panel.toggle(from: .statusItem) },
       onOpenSettings: { [weak self] in self?.openSettings() },
       onOpenAbout: { [weak self] in self?.showAbout(nil) },
+      onCheckForUpdates: { [weak self] in self?.checkForUpdates(nil) },
       onWillShowMenu: { [weak self] in self?.panel.close() }
     )
     panel.statusButton = statusItem.button
@@ -115,6 +119,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     NSApp.orderFrontStandardAboutPanel(options: options)
   }
 
+  @objc func checkForUpdates(_ sender: Any?) {
+    panel.close()
+    Task { await updateChecker.check(showingResult: true) }
+  }
+
   private func confirmClearHistory() {
     panel.close()
     NSApp.activate()
@@ -167,6 +176,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let preferences = preferences
     let controller = controller!
     let panelModel = panelModel!
+    let updateChecker = updateChecker!
     observationTasks = [
       Task {
         for await rules in Observations({ CaptureRules(preferences: preferences) }) {
@@ -181,6 +191,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       Task {
         for await combo in Observations({ preferences.hotKey }) {
           HotKeyCenter.shared.register(combo)
+        }
+      },
+      Task {
+        for await enabled in Observations({ preferences.checkForUpdates }) {
+          updateChecker.setAutomatic(enabled)
         }
       },
       Task { [weak self] in

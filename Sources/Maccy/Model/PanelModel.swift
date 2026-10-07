@@ -40,6 +40,8 @@ final class PanelModel {
   private(set) var previewImage: NSImage?
   private(set) var thumbnails: [Int64: NSImage] = [:]
 
+  /// Set by the app. The footer shows a new version.
+  var updateChecker: UpdateChecker?
   /// The app that receives the paste, shown as "Paste to …".
   var targetApp: SourceApp?
   /// Increments on each open, so the view focuses the search field.

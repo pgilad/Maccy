@@ -10,6 +10,8 @@ import SwiftUI
 ///   code against a private, named pasteboard and a temporary store.
 /// - `Maccy --render-snapshots <dir>`: renders the panel and the settings
 ///   with sample data to PNG files.
+/// - `Maccy --check-update <version>`: asks GitHub for the latest release, as if
+///   `<version>` runs. It uses the network, so the self-test and CI do not run it.
 enum Diagnostics {
   /// Returns `true` when a diagnostic started. It calls `exit` when it ends.
   static func startIfRequested(_ arguments: [String]) -> Bool {
@@ -20,6 +22,18 @@ enum Diagnostics {
     if let index = arguments.firstIndex(of: "--render-snapshots"), arguments.indices.contains(index + 1) {
       let directory = URL(filePath: arguments[index + 1], directoryHint: .isDirectory)
       Task { exit(await SnapshotRenderer.render(to: directory) ? 0 : 1) }
+      return true
+    }
+    if let index = arguments.firstIndex(of: "--check-update"), arguments.indices.contains(index + 1) {
+      let version = AppVersion(arguments[index + 1])
+      Task {
+        let state = await UpdateChecker.fetchState(current: version)
+        print(state)
+        if case .failed = state {
+          exit(1)
+        }
+        exit(0)
+      }
       return true
     }
     return false
@@ -215,7 +229,9 @@ final class SelfTest {
 
     // 13. Settings: a tab switch resizes the window with no animation. Sample the
     // height: an animation shows heights between the old and the new value.
-    let settings = SettingsWindowController.makeWindow(preferences: preferences, controller: controller)
+    // Not started: the self-test makes no network request.
+    let updateChecker = UpdateChecker(preferences: preferences)
+    let settings = SettingsWindowController.makeWindow(preferences: preferences, controller: controller, updateChecker: updateChecker)
     settings.setFrameOrigin(NSPoint(x: -20_000, y: -20_000))
     settings.orderFrontRegardless()
     try? await Task.sleep(for: .milliseconds(200))
@@ -232,7 +248,7 @@ final class SelfTest {
     print("  settings heights: \(Array(NSOrderedSet(array: heights)))")
     check(finalHeight < generalHeight && intermediate.isEmpty, "settings tab switch has no animation")
     check(!settings.styleMask.contains(.miniaturizable), "settings window has no minimize button, like Apple's settings")
-    let reopened = SettingsWindowController.makeWindow(preferences: preferences, controller: controller)
+    let reopened = SettingsWindowController.makeWindow(preferences: preferences, controller: controller, updateChecker: updateChecker)
     check((reopened.contentViewController as? NSTabViewController)?.selectedTabViewItemIndex == 3, "settings reopen on the last tab")
 
     // 14. Right-click: a point on a row finds that row; a point in the search bar finds none.
@@ -256,6 +272,8 @@ final class SelfTest {
     // 15. Menus: About in the app menu, and the global shortcut as a menu key equivalent.
     let appMenu = AppMenu.make().items.first?.submenu
     check(appMenu?.items.first?.action == #selector(AppDelegate.showAbout(_:)), "app menu starts with About Maccy")
+    check(appMenu?.items.dropFirst().first?.action == #selector(AppDelegate.checkForUpdates(_:)), "Check for Updates follows About")
+    check(!Preferences(defaults: defaults).checkForUpdates, "automatic update checks are off by default")
     check(KeyCombo(keyCode: UInt16(kVK_F5), modifiers: .option).menuKeyEquivalent == String(Character(NSEvent.SpecialKey.f5.unicodeScalar)),
           "a function-key shortcut becomes a menu key equivalent")
 

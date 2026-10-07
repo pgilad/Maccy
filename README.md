@@ -31,7 +31,7 @@ Requires macOS 26 or later on Apple silicon. On first start, grant **Accessibili
 1. Download `Maccy-<version>-arm64.zip` from the [latest release](https://github.com/pgilad/Maccy/releases/latest). Open it and move **Maccy** to **Applications**.
 2. Open Maccy. macOS blocks the first start, because the app is not notarized. Go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
-To update, replace the app with a newer release. All releases are signed with the same certificate, so macOS keeps the Accessibility permission.
+To update, replace the app with a newer release. **Check for Updates…** in the menu bar menu tells you when a new release is out. All releases are signed with the same certificate, so macOS keeps the Accessibility permission.
 
 ### Build from source
 
@@ -77,7 +77,7 @@ Settings can swap <kbd>↩</kbd> and <kbd>⌘↩</kbd>. If the shortcut does not
 
 ## Privacy
 
-- No network access, no telemetry and no auto-updater. The app links only Apple frameworks.
+- No telemetry and no auto-updater. The only network request is the update check: Maccy asks the GitHub API for the latest release when you choose **Check for Updates…**, or once a day if you turn on automatic checks (off by default). The app links only Apple frameworks.
 - Copies that password managers mark as concealed are never read, and password managers are ignored by default.
 - Copies that look like API keys, tokens or private keys are deleted after 15 minutes, or not saved at all.
 - Nothing you copy goes to logs or notifications.

@@ -1,7 +1,8 @@
 import AppKit
 
 #if DEBUG
-// Diagnostics for development builds: `Maccy --self-test`, `Maccy --render-snapshots <dir>`.
+// Diagnostics for development builds: `Maccy --self-test`, `Maccy --render-snapshots <dir>`,
+// `Maccy --check-update <version>`.
 if Diagnostics.startIfRequested(CommandLine.arguments) {
   NSApplication.shared.setActivationPolicy(.prohibited)
   NSApplication.shared.run()

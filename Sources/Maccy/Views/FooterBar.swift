@@ -68,6 +68,16 @@ struct FooterBar: View {
           .foregroundStyle(.orange)
       }
       .buttonStyle(.plain)
+    } else if case .available(let version, let page) = model.updateChecker?.state {
+      Button {
+        NSWorkspace.shared.open(page)
+      } label: {
+        Label("Maccy \(version) is available", systemImage: "arrow.down.circle.fill")
+          .font(.caption)
+          .foregroundStyle(.tint)
+      }
+      .buttonStyle(.plain)
+      .help("Opens the release page on GitHub. Download the new version, quit Maccy and replace the app.")
     } else {
       Text(model.rows.count == PanelModel.rowLimit ? "\(PanelModel.rowLimit)+ items" : "\(model.rows.count) items")
         .font(.caption)

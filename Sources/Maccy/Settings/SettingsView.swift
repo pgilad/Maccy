@@ -427,9 +427,40 @@ struct RemoveButton: View {
 
 struct AdvancedSettings: View {
   @Bindable var preferences: Preferences
+  let updateChecker: UpdateChecker
 
   var body: some View {
     Form {
+      Section {
+        Toggle("Check for updates automatically", isOn: $preferences.checkForUpdates)
+        HStack {
+          Text(updateChecker.statusText)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+          Spacer()
+          if case .available(_, let page) = updateChecker.state {
+            Button("Open Release Page") {
+              NSWorkspace.shared.open(page)
+            }
+            .controlSize(.small)
+          }
+          Button("Check Now") {
+            Task { await updateChecker.check(showingResult: false) }
+          }
+          .controlSize(.small)
+          .disabled(updateChecker.state == .checking)
+        }
+      } header: {
+        Text("Updates")
+      } footer: {
+        Text("""
+          Maccy asks GitHub for the latest release once a day, or when you click Check Now. \
+          It sends nothing about you or your history. To update, download the new version and replace the app.
+          """)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
       Section {
         Toggle("Pause capture", isOn: Binding(
           get: { preferences.isPaused },

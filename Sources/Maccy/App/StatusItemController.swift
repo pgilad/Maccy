@@ -10,6 +10,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private let onToggle: () -> Void
   private let onOpenSettings: () -> Void
   private let onOpenAbout: () -> Void
+  private let onCheckForUpdates: () -> Void
   private let onWillShowMenu: () -> Void
   private var visibilityObservation: NSKeyValueObservation?
 
@@ -21,6 +22,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     onToggle: @escaping () -> Void,
     onOpenSettings: @escaping () -> Void,
     onOpenAbout: @escaping () -> Void,
+    onCheckForUpdates: @escaping () -> Void,
     onWillShowMenu: @escaping () -> Void
   ) {
     self.preferences = preferences
@@ -28,6 +30,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     self.onToggle = onToggle
     self.onOpenSettings = onOpenSettings
     self.onOpenAbout = onOpenAbout
+    self.onCheckForUpdates = onCheckForUpdates
     self.onWillShowMenu = onWillShowMenu
     super.init()
     statusItem.behavior = .removalAllowed
@@ -139,6 +142,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     let about = menu.addItem(withTitle: "About Maccy", action: #selector(openAbout), keyEquivalent: "")
     about.target = self
     about.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)
+    let update = menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+    update.target = self
+    update.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
     menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
     menu.addItem(.separator())
     menu.addItem(withTitle: "Quit Maccy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -151,6 +157,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   @objc private func openPanel() { onToggle() }
   @objc private func openSettings() { onOpenSettings() }
   @objc private func openAbout() { onOpenAbout() }
+  @objc private func checkForUpdates() { onCheckForUpdates() }
 
   @objc private func resume() {
     preferences.resume()

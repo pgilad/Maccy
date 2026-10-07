@@ -18,15 +18,17 @@ final class SettingsWindowController {
   private var window: NSWindow?
   private let preferences: Preferences
   private let controller: HistoryController
+  private let updateChecker: UpdateChecker
 
-  init(preferences: Preferences, controller: HistoryController) {
+  init(preferences: Preferences, controller: HistoryController, updateChecker: UpdateChecker) {
     self.preferences = preferences
     self.controller = controller
+    self.updateChecker = updateChecker
   }
 
   func show() {
     if window == nil {
-      let window = Self.makeWindow(preferences: preferences, controller: controller)
+      let window = Self.makeWindow(preferences: preferences, controller: controller, updateChecker: updateChecker)
       if !window.setFrameUsingName(Self.frameName) {
         window.center()
       }
@@ -38,13 +40,19 @@ final class SettingsWindowController {
     window?.makeKeyAndOrderFront(nil)
   }
 
-  static func makeWindow(preferences: Preferences, controller: HistoryController, selectedTab: Int? = nil) -> NSWindow {
+  static func makeWindow(
+    preferences: Preferences,
+    controller: HistoryController,
+    updateChecker: UpdateChecker,
+    selectedTab: Int? = nil
+  ) -> NSWindow {
     let panes = [
       Pane(title: "General", symbol: "gearshape", height: 800, view: AnyView(GeneralSettings(preferences: preferences))),
       Pane(title: "History", symbol: "clock.arrow.circlepath", height: 715,
            view: AnyView(HistorySettings(preferences: preferences, controller: controller))),
       Pane(title: "Privacy", symbol: "hand.raised", height: 720, view: AnyView(PrivacySettings(preferences: preferences))),
-      Pane(title: "Advanced", symbol: "gearshape.2", height: 250, view: AnyView(AdvancedSettings(preferences: preferences))),
+      Pane(title: "Advanced", symbol: "gearshape.2", height: 420,
+           view: AnyView(AdvancedSettings(preferences: preferences, updateChecker: updateChecker))),
     ]
 
     let tabs = SettingsTabViewController()
