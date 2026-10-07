@@ -50,6 +50,9 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
       SWIFT_FLAGS: -Xswiftc -warnings-as-errors
+      # In this VM, Vision cannot compile its text recognition model (E5RT error 11), so OCR
+      # fails. The macOS 26 job and a Mac run the OCR checks.
+      MACCY_SELFTEST_SKIP_OCR: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

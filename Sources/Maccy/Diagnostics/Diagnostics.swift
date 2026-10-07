@@ -65,6 +65,9 @@ enum Diagnostics {
 final class SelfTest {
   private var failures = 0
   private var passes = 0
+  private var skips = 0
+  /// Vision cannot load its text model in some VMs (the GitHub macOS 27 image). CI sets this there.
+  private let skipsOCR = ProcessInfo.processInfo.environment["MACCY_SELFTEST_SKIP_OCR"] == "1"
 
   // A linear script: each step depends on the one before it.
   // swiftlint:disable:next function_body_length
@@ -124,7 +127,7 @@ final class SelfTest {
     check((try? await store.thumbnail(id: imageID)) != nil, "image thumbnail is made at capture")
     await waitUntil { controller.processedOCR > ocrBefore }
     let ocrHits = (try? await store.search(SearchQuery.parse("48213"), limit: 10).hits) ?? []
-    check(ocrHits.first?.id == imageID, "text in the image is searchable (OCR)")
+    checkOCR(ocrHits.first?.id == imageID, "text in the image is searchable (OCR)")
 
     // 6. Files.
     await copy(to: pasteboard, controller: controller) {
@@ -265,12 +268,12 @@ final class SelfTest {
     await waitUntil { !model.isSearching }
     await model.select(imageID)
     let hotKey = preferences.hotKey
-    check(model.actions.contains { $0.id == "ocr" && $0.keyEquivalent == "c" && $0.modifiers == [.command, .option] },
-          "Copy Text in Image is ⌥⌘C")
+    checkOCR(model.actions.contains { $0.id == "ocr" && $0.keyEquivalent == "c" && $0.modifiers == [.command, .option] },
+             "Copy Text in Image is ⌥⌘C")
     check(!model.actions.contains { $0.keyEquivalent == hotKey?.menuKeyEquivalent && $0.modifiers == hotKey?.modifiers },
           "no action shows the global shortcut")
 
-    print("\nSelf-test: \(passes) passed, \(failures) failed")
+    print("\nSelf-test: \(passes) passed, \(failures) failed" + (skips > 0 ? ", \(skips) skipped" : ""))
     return failures == 0
   }
 
@@ -288,6 +291,16 @@ final class SelfTest {
     } else {
       failures += 1
       print("FAIL \(name)")
+    }
+  }
+
+  /// A check that needs text recognition. MACCY_SELFTEST_SKIP_OCR=1 skips it.
+  private func checkOCR(_ condition: @autoclosure () -> Bool, _ name: String) {
+    if skipsOCR {
+      skips += 1
+      print("SKIP \(name) (MACCY_SELFTEST_SKIP_OCR)")
+    } else {
+      check(condition(), name)
     }
   }
 
