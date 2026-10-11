@@ -9,7 +9,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let onToggle: () -> Void
   private let onOpenSettings: () -> Void
-  private let onOpenAbout: () -> Void
   private let onCheckForUpdates: () -> Void
   private let onWillShowMenu: () -> Void
   private var visibilityObservation: NSKeyValueObservation?
@@ -21,7 +20,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     controller: HistoryController,
     onToggle: @escaping () -> Void,
     onOpenSettings: @escaping () -> Void,
-    onOpenAbout: @escaping () -> Void,
     onCheckForUpdates: @escaping () -> Void,
     onWillShowMenu: @escaping () -> Void
   ) {
@@ -29,7 +27,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     self.controller = controller
     self.onToggle = onToggle
     self.onOpenSettings = onOpenSettings
-    self.onOpenAbout = onOpenAbout
     self.onCheckForUpdates = onCheckForUpdates
     self.onWillShowMenu = onWillShowMenu
     super.init()
@@ -136,12 +133,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       menu.addItem(withTitle: "Skip Next Copy", action: #selector(skipNext), keyEquivalent: "").target = self
     }
     menu.addItem(.separator())
-    // macOS 26 adds icons to Settings and Quit, and to About only with the standard
-    // About action. Without an icon, About is indented to align with Settings.
+    // About is in Settings, as its last tab. macOS 26 adds icons to Settings and Quit.
+    // Without an icon, Check for Updates is indented to align with Settings.
     // macOS 27 decides if menu item images show, and usually hides them. Maccy follows it.
-    let about = menu.addItem(withTitle: "About Maccy", action: #selector(openAbout), keyEquivalent: "")
-    about.target = self
-    about.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)
     let update = menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
     update.target = self
     update.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
@@ -156,7 +150,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
   @objc private func openPanel() { onToggle() }
   @objc private func openSettings() { onOpenSettings() }
-  @objc private func openAbout() { onOpenAbout() }
   @objc private func checkForUpdates() { onCheckForUpdates() }
 
   @objc private func resume() {
