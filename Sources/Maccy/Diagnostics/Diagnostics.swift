@@ -248,6 +248,7 @@ final class SelfTest {
     print("  settings heights: \(Array(NSOrderedSet(array: heights)))")
     check(finalHeight < generalHeight && intermediate.isEmpty, "settings tab switch has no animation")
     check(!settings.styleMask.contains(.miniaturizable), "settings window has no minimize button, like Apple's settings")
+    check((settings.contentViewController as? NSTabViewController)?.tabViewItems.last?.label == "About", "settings end with the About tab")
     let reopened = SettingsWindowController.makeWindow(preferences: preferences, controller: controller, updateChecker: updateChecker)
     check((reopened.contentViewController as? NSTabViewController)?.selectedTabViewItemIndex == 3, "settings reopen on the last tab")
 

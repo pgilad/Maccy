@@ -64,7 +64,7 @@ enum SnapshotRenderer {
     // (frame view included) offscreen, which ImageRenderer cannot do.
     // Not started: the snapshots make no network request.
     let updateChecker = UpdateChecker(preferences: preferences)
-    for (index, name) in ["general", "history", "privacy", "advanced"].enumerated() {
+    for (index, name) in ["general", "history", "privacy", "advanced", "about"].enumerated() {
       let window = SettingsWindowController.makeWindow(
         preferences: preferences, controller: controller, updateChecker: updateChecker, selectedTab: index
       )

@@ -427,10 +427,93 @@ struct RemoveButton: View {
 
 struct AdvancedSettings: View {
   @Bindable var preferences: Preferences
-  let updateChecker: UpdateChecker
 
   var body: some View {
     Form {
+      Section {
+        Toggle("Pause capture", isOn: Binding(
+          get: { preferences.isPaused },
+          set: { $0 ? preferences.pause() : preferences.resume() }
+        ))
+      } footer: {
+        VStack(alignment: .leading, spacing: 6) {
+          Text("⌥-click the menu bar icon to pause or resume. ⇧⌥-click skips only the next copy. A script can do the same:")
+          Text("defaults write \(Bundle.main.bundleIdentifier ?? "com.pgilad.Maccy") ignoreEvents true")
+            .font(.caption.monospaced())
+            .textSelection(.enabled)
+          Text("defaults write \(Bundle.main.bundleIdentifier ?? "com.pgilad.Maccy") ignoreOnlyNextEvent true")
+            .font(.caption.monospaced())
+            .textSelection(.enabled)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      }
+
+      Section {
+        Picker("Check the clipboard every", selection: $preferences.pollInterval) {
+          Text("0.1 s").tag(0.1)
+          Text("0.25 s").tag(0.25)
+          Text("0.5 s").tag(0.5)
+          Text("1 s").tag(1.0)
+        }
+      } footer: {
+        Text("macOS has no clipboard change event. Maccy compares a change counter, which reads no content.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .formStyle(.grouped)
+  }
+}
+
+// MARK: - About
+
+struct AboutSettings: View {
+  @Bindable var preferences: Preferences
+  let updateChecker: UpdateChecker
+
+  private static let repository = URL(string: "https://github.com/pgilad/Maccy")!
+
+  /// The bundle script stamps the version, build and commit into Info.plist.
+  /// A debug build runs without a bundle, so it has none of them.
+  private static var versionText: String {
+    let info = Bundle.main.infoDictionary ?? [:]
+    guard let version = info["CFBundleShortVersionString"] as? String else {
+      return "Development build"
+    }
+    var text = "Version \(version)"
+    if let build = info["CFBundleVersion"] as? String {
+      text += " (\(build))"
+    }
+    if let commit = info["MaccyGitCommit"] as? String {
+      text += ", commit \(commit)"
+    }
+    return text
+  }
+
+  var body: some View {
+    Form {
+      Section {
+        HStack(spacing: 14) {
+          Image(nsImage: NSApp.applicationIconImage)
+            .resizable()
+            .frame(width: 64, height: 64)
+          VStack(alignment: .leading, spacing: 3) {
+            Text("Maccy")
+              .font(.title2.bold())
+            Text(Self.versionText)
+              .foregroundStyle(.secondary)
+              .textSelection(.enabled)
+            if let copyright = Bundle.main.object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String {
+              Text(copyright)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+          }
+        }
+        .padding(.vertical, 4)
+      }
+
       Section {
         Toggle("Check for updates automatically", isOn: $preferences.checkForUpdates)
         HStack {
@@ -462,33 +545,17 @@ struct AdvancedSettings: View {
       }
 
       Section {
-        Toggle("Pause capture", isOn: Binding(
-          get: { preferences.isPaused },
-          set: { $0 ? preferences.pause() : preferences.resume() }
-        ))
-      } footer: {
-        VStack(alignment: .leading, spacing: 6) {
-          Text("⌥-click the menu bar icon to pause or resume. ⇧⌥-click skips only the next copy. A script can do the same:")
-          Text("defaults write \(Bundle.main.bundleIdentifier ?? "com.pgilad.Maccy") ignoreEvents true")
-            .font(.caption.monospaced())
-            .textSelection(.enabled)
-          Text("defaults write \(Bundle.main.bundleIdentifier ?? "com.pgilad.Maccy") ignoreOnlyNextEvent true")
-            .font(.caption.monospaced())
-            .textSelection(.enabled)
+        LabeledContent("Source code") {
+          Link("github.com/pgilad/Maccy", destination: Self.repository)
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-      }
-
-      Section {
-        Picker("Check the clipboard every", selection: $preferences.pollInterval) {
-          Text("0.1 s").tag(0.1)
-          Text("0.25 s").tag(0.25)
-          Text("0.5 s").tag(0.5)
-          Text("1 s").tag(1.0)
+        LabeledContent("Release notes") {
+          Link("Releases", destination: Self.repository.appending(path: "releases"))
+        }
+        LabeledContent("Report a problem") {
+          Link("Issues", destination: Self.repository.appending(path: "issues"))
         }
       } footer: {
-        Text("macOS has no clipboard change event. Maccy compares a change counter, which reads no content.")
+        Text("This fork started from [Maccy](https://github.com/p0deje/Maccy) by Alexey Rodionov.")
           .font(.caption)
           .foregroundStyle(.secondary)
       }

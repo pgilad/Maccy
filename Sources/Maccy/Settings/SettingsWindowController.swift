@@ -52,8 +52,9 @@ final class SettingsWindowController {
       Pane(title: "History", symbol: "clock.arrow.circlepath", height: 715,
            view: AnyView(HistorySettings(preferences: preferences, controller: controller))),
       Pane(title: "Privacy", symbol: "hand.raised", height: 720, view: AnyView(PrivacySettings(preferences: preferences))),
-      Pane(title: "Advanced", symbol: "gearshape.2", height: 420,
-           view: AnyView(AdvancedSettings(preferences: preferences, updateChecker: updateChecker))),
+      Pane(title: "Advanced", symbol: "gearshape.2", height: 250, view: AnyView(AdvancedSettings(preferences: preferences))),
+      Pane(title: "About", symbol: "info.circle", height: 480,
+           view: AnyView(AboutSettings(preferences: preferences, updateChecker: updateChecker))),
     ]
 
     let tabs = SettingsTabViewController()

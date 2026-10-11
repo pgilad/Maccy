@@ -203,7 +203,7 @@ final class Preferences {
   var didShowOnboarding: Bool { didSet { defaults.set(didShowOnboarding, forKey: Key.didShowOnboarding) } }
   /// The last tab of the Settings window.
   var settingsTab: Int { didSet { defaults.set(settingsTab, forKey: Key.settingsTab) } }
-  /// Ask GitHub once a day for a new release. On by default. Settings › Advanced turns it off.
+  /// Ask GitHub once a day for a new release. On by default. Settings › About turns it off.
   var checkForUpdates: Bool { didSet { defaults.set(checkForUpdates, forKey: Key.checkForUpdates) } }
   /// The time of the last successful update check, automatic or not.
   var lastUpdateCheck: Date? { didSet { defaults.set(lastUpdateCheck?.timeIntervalSince1970, forKey: Key.lastUpdateCheck) } }
