@@ -17,7 +17,7 @@ enum SnapshotRenderer {
     await seed(store)
 
     let controller = HistoryController(
-      preferences: preferences, store: store, pasteboard: NSPasteboard(name: .init("com.pgilad.Maccy.snapshots"))
+      preferences: preferences, store: store, pasteboard: NSPasteboard(name: .init("com.giladpeleg.maccy.snapshots"))
     )
     let model = PanelModel(controller: controller)
     model.prepareForOpen(target: SourceApp(bundleID: "com.apple.dt.Xcode", name: "Xcode"))

@@ -51,7 +51,7 @@ enum Diagnostics {
   }
 
   static func isolatedDefaults(_ name: String) -> UserDefaults {
-    let suite = "com.pgilad.Maccy.\(name)"
+    let suite = "com.giladpeleg.maccy.\(name)"
     UserDefaults().removePersistentDomain(forName: suite)
     return UserDefaults(suiteName: suite)!
   }
@@ -89,7 +89,7 @@ final class SelfTest {
     let directory = Diagnostics.temporaryDirectory("selftest")
     defer { try? FileManager.default.removeItem(at: directory) }
     let defaults = Diagnostics.isolatedDefaults("selftest")
-    let pasteboard = NSPasteboard(name: NSPasteboard.Name("com.pgilad.Maccy.selftest.\(UUID().uuidString)"))
+    let pasteboard = NSPasteboard(name: NSPasteboard.Name("com.giladpeleg.maccy.selftest.\(UUID().uuidString)"))
     defer { pasteboard.releaseGlobally() }
 
     let preferences = Preferences(defaults: defaults)

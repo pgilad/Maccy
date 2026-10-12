@@ -46,7 +46,7 @@ final class PasteboardWriter {
       }
       if offset == 0 {
         item.setData(Data(), forType: NSPasteboard.PasteboardType(PasteboardTypes.fromMaccy))
-        item.setString(Bundle.main.bundleIdentifier ?? "com.pgilad.Maccy", forType: NSPasteboard.PasteboardType(PasteboardTypes.source))
+        item.setString(Bundle.main.bundleIdentifier ?? "com.giladpeleg.maccy", forType: NSPasteboard.PasteboardType(PasteboardTypes.source))
       }
       items.append(item)
     }

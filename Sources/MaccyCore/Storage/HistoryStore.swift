@@ -59,7 +59,7 @@ public actor HistoryStore {
   public nonisolated let directory: URL
   private let database: SQLiteDatabase
   private let blobs: BlobStore
-  private let logger = Logger(subsystem: "com.pgilad.Maccy", category: "store")
+  private let logger = Logger(subsystem: "com.giladpeleg.maccy", category: "store")
 
   private static let summaryColumns = """
     items.id, items.kind, items.title, items.app_bundle_id, items.app_name, items.first_copied_at,
@@ -83,7 +83,7 @@ public actor HistoryStore {
     do {
       database = try Self.openAndMigrate(path: path)
     } catch let error as SQLiteError where error.isDamagedFile {
-      Logger(subsystem: "com.pgilad.Maccy", category: "store")
+      Logger(subsystem: "com.giladpeleg.maccy", category: "store")
         .error("Cannot open the database, moving it aside: \(String(describing: error), privacy: .public)")
       let suffix = ".corrupt-\(Int(Date.now.timeIntervalSince1970))"
       for extra in ["", "-wal", "-shm"] {

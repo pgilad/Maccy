@@ -438,10 +438,10 @@ struct AdvancedSettings: View {
       } footer: {
         VStack(alignment: .leading, spacing: 6) {
           Text("⌥-click the menu bar icon to pause or resume. ⇧⌥-click skips only the next copy. A script can do the same:")
-          Text("defaults write \(Bundle.main.bundleIdentifier ?? "com.pgilad.Maccy") ignoreEvents true")
+          Text("defaults write \(Bundle.main.bundleIdentifier ?? "com.giladpeleg.maccy") ignoreEvents true")
             .font(.caption.monospaced())
             .textSelection(.enabled)
-          Text("defaults write \(Bundle.main.bundleIdentifier ?? "com.pgilad.Maccy") ignoreOnlyNextEvent true")
+          Text("defaults write \(Bundle.main.bundleIdentifier ?? "com.giladpeleg.maccy") ignoreOnlyNextEvent true")
             .font(.caption.monospaced())
             .textSelection(.enabled)
         }

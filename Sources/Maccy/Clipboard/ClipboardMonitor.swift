@@ -16,7 +16,7 @@ nonisolated final class ClipboardMonitor: Sendable {
   // NSPasteboard and UserDefaults are thread-safe, but not marked Sendable.
   nonisolated(unsafe) private let pasteboard: NSPasteboard
   // Utility, not user-initiated: the poll runs four times a second, all day.
-  private let queue = DispatchQueue(label: "com.pgilad.Maccy.capture", qos: .utility)
+  private let queue = DispatchQueue(label: "com.giladpeleg.maccy.capture", qos: .utility)
   private let state: Mutex<State>
   private let rules = Mutex(CaptureRules())
   private let sourceApp = Mutex<SourceApp?>(nil)

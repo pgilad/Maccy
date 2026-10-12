@@ -40,11 +40,15 @@ Requires the Command Line Tools (`xcode-select --install`). Xcode is not needed.
 ```fish
 git clone https://github.com/pgilad/Maccy.git
 cd Maccy
-make signing-identity   # once per Mac
+scripts/create-signing-identity.sh /path/to/gilad-peleg-local-signing.p12
 make install            # build, sign, copy to /Applications and start
 ```
 
-`make signing-identity` creates a local code-signing certificate, so macOS keeps the Accessibility permission after each rebuild.
+Import the shared `Gilad Peleg Local Signing` identity from your 1Password backup on each build Mac. Keychain asks for the backup password. `make signing-identity` checks that the identity is valid; it does not create another key. Reusing the identity keeps the app's signing identity stable across rebuilds.
+
+Local builds require this identity by default. To use another identity, set `MACCY_SIGN_IDENTITY`. For an ad-hoc build, run `env MACCY_SIGN_IDENTITY=- make app`; CI uses this option explicitly.
+
+The bundle ID is now `com.giladpeleg.maccy`. Data and settings from the former `com.pgilad.Maccy` sandbox remain in that container and are not migrated automatically. Grant Accessibility permission to the new app after installation.
 
 To update, run `git pull` and `make install`.
 
@@ -85,7 +89,7 @@ Settings can swap <kbd>↩</kbd> and <kbd>⌘↩</kbd>. In a password field, mac
 
 ## About this fork
 
-This fork started from [Maccy](https://github.com/p0deje/Maccy) by Alexey Rodionov and is now a rewrite on SQLite with a full-text index. It drops Sparkle auto-update, App Store prompts, copy notifications, App Intents, translations and all third-party Swift packages. Its bundle ID is `com.pgilad.Maccy`, so it does not share data or permissions with upstream Maccy.
+This fork started from [Maccy](https://github.com/p0deje/Maccy) by Alexey Rodionov and is now a rewrite on SQLite with a full-text index. It drops Sparkle auto-update, App Store prompts, copy notifications, App Intents, translations and all third-party Swift packages. Its bundle ID is `com.giladpeleg.maccy`, so it does not share data or permissions with upstream Maccy.
 
 ## Development
 

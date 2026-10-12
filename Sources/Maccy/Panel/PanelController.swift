@@ -24,7 +24,7 @@ final class FloatingPanel: NSPanel {
     hasShadow = true
     animationBehavior = .none
     minSize = NSSize(width: 560, height: 340)
-    identifier = NSUserInterfaceItemIdentifier("com.pgilad.Maccy.panel")
+    identifier = NSUserInterfaceItemIdentifier("com.giladpeleg.maccy.panel")
     // Not shown (no title bar), but VoiceOver reads it.
     title = "Clipboard History"
   }

@@ -78,7 +78,7 @@ final class SettingsWindowController {
     window.styleMask = [.titled, .closable]
     window.toolbarStyle = .preference
     window.isReleasedWhenClosed = false
-    window.identifier = NSUserInterfaceItemIdentifier("com.pgilad.Maccy.settings")
+    window.identifier = NSUserInterfaceItemIdentifier("com.giladpeleg.maccy.settings")
     return window
   }
 }
