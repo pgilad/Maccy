@@ -8,7 +8,7 @@ Requires macOS 26 or later on Apple silicon.
 
 To update, quit Maccy and replace the app. If macOS blocks the new version, do step 2 again. Maccy checks GitHub once a day and tells you when a new release is out. To turn this off, go to **Settings → About**.
 
-This release uses the bundle ID `com.giladpeleg.maccy` and the shared `Gilad Peleg Local Signing` identity used by local builds. Compared with the former `com.pgilad.Maccy` builds, it has a separate sandbox for history and settings and needs a new Accessibility grant. Your previous data remains in the old container; it is not migrated automatically.
+This release uses the shared `Gilad Peleg Local Signing` certificate used by local builds. Keep the same app in Applications when you update.
 
 ## Verify the download
 

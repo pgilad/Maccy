@@ -40,7 +40,7 @@ Requires the Command Line Tools (`xcode-select --install`). Xcode is not needed.
 ```fish
 git clone https://github.com/pgilad/Maccy.git
 cd Maccy
-scripts/create-signing-identity.sh /path/to/gilad-peleg-local-signing.p12
+scripts/signing-identity.sh /path/to/gilad-peleg-local-signing.p12
 make install            # build, sign, copy to /Applications and start
 ```
 
@@ -48,7 +48,7 @@ Import the shared `Gilad Peleg Local Signing` identity from your 1Password backu
 
 Local builds require this identity by default. To use another identity, set `MACCY_SIGN_IDENTITY`. For an ad-hoc build, run `env MACCY_SIGN_IDENTITY=- make app`; CI uses this option explicitly.
 
-The bundle ID is now `com.giladpeleg.maccy`. Data and settings from the former `com.pgilad.Maccy` sandbox remain in that container and are not migrated automatically. Grant Accessibility permission to the new app after installation.
+The bundle ID is `com.giladpeleg.maccy`.
 
 To update, run `git pull` and `make install`.
 
@@ -100,6 +100,14 @@ make lint           # SwiftLint (brew install swiftlint)
 make run            # debug build with a throwaway data folder
 make readme-images  # render the screenshots above from the app's own views
 ```
+
+Local builds and releases use the same `Gilad Peleg Local Signing` certificate. To set up release signing, import the shared backup on your Mac, then run:
+
+```fish
+scripts/configure-release-signing.sh /path/to/gilad-peleg-local-signing.p12
+```
+
+The script asks for the backup password, checks that the backup matches the certificate in your login Keychain and has a private key, then stores it in the GitHub `release` environment secrets. It limits that environment to `v*` tags. It does not create a certificate or change your local signing identity. Keep the backup in 1Password and use it on each build Mac.
 
 To release, set the new version in `VERSION`, commit, and push a matching tag. The release workflow tests, builds and signs the app, then publishes the zip with build provenance. The release notes list the commits since the previous tag, without the `Release` commits.
 

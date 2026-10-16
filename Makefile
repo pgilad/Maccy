@@ -61,7 +61,7 @@ run: build ## Run the debug build with a throwaway data folder
 	MACCY_DATA_DIR=$$(mktemp -d) .build/debug/Maccy
 
 signing-identity: ## Check the shared local signing identity
-	scripts/create-signing-identity.sh
+	scripts/signing-identity.sh
 
 clean:
 	rm -rf .build build

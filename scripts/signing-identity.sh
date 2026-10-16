@@ -12,7 +12,7 @@ fi
 
 if [ "$#" -ne 1 ]; then
   echo "Import the shared .p12 backup from 1Password with:" >&2
-  echo "  scripts/create-signing-identity.sh /path/to/identity.p12" >&2
+  echo "  scripts/signing-identity.sh /path/to/identity.p12" >&2
   exit 1
 fi
 

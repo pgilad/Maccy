@@ -13,7 +13,7 @@ jobs:
   release:
     runs-on: macos-26
     timeout-minutes: 30
-    # Holds the signing certificate. Only v* tags can use it. See scripts/create-release-identity.sh.
+    # Holds the shared signing backup. See scripts/configure-release-signing.sh.
     environment: release
     permissions:
       contents: write # create the release
@@ -46,8 +46,8 @@ jobs:
           MACCY_SIGNING_P12: ${{ secrets.MACCY_SIGNING_P12 }}
           MACCY_SIGNING_P12_PASSWORD: ${{ secrets.MACCY_SIGNING_P12_PASSWORD }}
         run: |
-          if [ -z "$MACCY_SIGNING_P12" ]; then
-            echo "::error::No signing certificate in the release environment. Run scripts/create-release-identity.sh."
+          if [ -z "$MACCY_SIGNING_P12" ] || [ -z "$MACCY_SIGNING_P12_PASSWORD" ]; then
+            echo "::error::Missing shared signing backup or password. Run scripts/configure-release-signing.sh."
             exit 1
           fi
           KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
@@ -58,13 +58,17 @@ jobs:
           printf '%s' "$MACCY_SIGNING_P12" | base64 --decode > "$RUNNER_TEMP/signing.p12"
           security import "$RUNNER_TEMP/signing.p12" -k "$KEYCHAIN" -P "$MACCY_SIGNING_P12_PASSWORD" -T /usr/bin/codesign
           rm "$RUNNER_TEMP/signing.p12"
+          if ! security find-identity -p codesigning "$KEYCHAIN" | grep -Fq -- '"Gilad Peleg Local Signing"'; then
+            echo "::error::The release secrets do not contain the shared signing identity. Run scripts/configure-release-signing.sh."
+            exit 1
+          fi
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
           # codesign finds the identity only in a keychain on the search list.
           # shellcheck disable=SC2046
           security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
       - run: make dist
         env:
-          MACCY_SIGN_IDENTITY: Maccy Release Signing
+          MACCY_SIGN_IDENTITY: Gilad Peleg Local Signing
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: build/Maccy-${{ env.VERSION }}-arm64.zip
